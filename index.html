@@ -1,16 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>EcoScan AR - Smart Recycling Guide</title>
-    <meta name="description" content="Point your camera at any item and instantly learn how to recycle it properly. AI-powered recycling assistant.">
+    <meta name="description"
+        content="AI-powered recycling assistant with barcode scanning, location-based rules, and community challenges.">
     <meta name="theme-color" content="#1a1a2e">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
     <!-- Camera Feed -->
     <video id="video" autoplay playsinline></video>
@@ -19,16 +22,27 @@
     <!-- Live Detection Indicator -->
     <div id="live-indicator">
         <span class="pulse"></span>
-        <span>LIVE</span>
+        <span id="live-text">LIVE</span>
     </div>
+
+    <!-- Language Selector -->
+    <button id="lang-btn" class="icon-btn" onclick="toggleLanguageModal()">🌐</button>
 
     <!-- Header Stats -->
     <div id="stats">
+        <div class="stat-item" onclick="showLeaderboard()">
+            <span class="stat-icon">🏆</span>
+            <div class="stat-content">
+                <span class="stat-value" id="points-count">0</span>
+                <span class="stat-label" data-i18n="points">Points</span>
+            </div>
+        </div>
+        <div class="stat-divider"></div>
         <div class="stat-item">
             <span class="stat-icon">📊</span>
             <div class="stat-content">
                 <span class="stat-value" id="items-count">0</span>
-                <span class="stat-label">Scanned</span>
+                <span class="stat-label" data-i18n="scanned">Scanned</span>
             </div>
         </div>
         <div class="stat-divider"></div>
@@ -36,55 +50,296 @@
             <span class="stat-icon">🌍</span>
             <div class="stat-content">
                 <span class="stat-value"><span id="co2-count">0</span>kg</span>
-                <span class="stat-label">CO₂ Saved</span>
+                <span class="stat-label">CO₂</span>
             </div>
         </div>
+    </div>
+
+    <!-- Location Badge -->
+    <div id="location-badge" onclick="showLocationSettings()">
+        <span>📍</span>
+        <span id="location-name">Detecting...</span>
+    </div>
+
+    <!-- Mode Toggle Buttons -->
+    <div id="mode-toggle">
+        <button class="mode-btn active" id="camera-mode-btn" onclick="switchMode('camera')">
+            <span>📷</span>
+            <span data-i18n="camera">Camera</span>
+        </button>
+        <button class="mode-btn" id="barcode-mode-btn" onclick="switchMode('barcode')">
+            <span>📊</span>
+            <span data-i18n="barcode">Barcode</span>
+        </button>
+    </div>
+
+    <!-- Barcode Scanner Overlay -->
+    <div id="barcode-overlay" class="hidden">
+        <div class="barcode-frame">
+            <div class="barcode-corner tl"></div>
+            <div class="barcode-corner tr"></div>
+            <div class="barcode-corner bl"></div>
+            <div class="barcode-corner br"></div>
+            <div class="barcode-line"></div>
+        </div>
+        <p class="barcode-hint" data-i18n="barcode_hint">Point at barcode or QR code</p>
     </div>
 
     <!-- Scan Button -->
     <button id="scan-btn">
         <span id="scan-icon">♻️</span>
-        <span id="scan-text">GET DETAILS</span>
+        <span id="scan-text" data-i18n="get_details">GET DETAILS</span>
     </button>
+
+    <!-- Bottom Nav -->
+    <nav id="bottom-nav">
+        <button class="nav-btn active" onclick="showHome()">
+            <span>🏠</span>
+            <span data-i18n="home">Home</span>
+        </button>
+        <button class="nav-btn" onclick="showChallenges()">
+            <span>🎯</span>
+            <span data-i18n="challenges">Challenges</span>
+        </button>
+        <button class="nav-btn" onclick="showLeaderboard()">
+            <span>🏆</span>
+            <span data-i18n="leaderboard">Leaderboard</span>
+        </button>
+        <button class="nav-btn" onclick="showNearby()">
+            <span>📍</span>
+            <span data-i18n="nearby">Nearby</span>
+        </button>
+    </nav>
 
     <!-- Result Card -->
     <div id="result" class="hidden">
         <div class="result-handle"></div>
+        <div id="object-list-section"></div>
         <div id="result-header">
             <span id="result-icon">♻️</span>
             <h2 id="result-title">Unknown Item</h2>
         </div>
         <div id="result-category"></div>
+
+        <!-- Location-specific rules -->
+        <div id="location-rules" class="location-rules">
+            <div class="location-header">
+                <span>📍</span>
+                <span id="location-rules-title">Local Rules</span>
+            </div>
+            <p id="location-rules-text"></p>
+        </div>
+
         <div id="result-content">
             <div class="info-row">
                 <span class="info-icon">📦</span>
                 <div class="info-content">
-                    <span class="info-label">Disposal</span>
+                    <span class="info-label" data-i18n="disposal">Disposal</span>
                     <span id="disposal-text" class="info-value"></span>
                 </div>
             </div>
             <div class="info-row">
                 <span class="info-icon">🗑️</span>
                 <div class="info-content">
-                    <span class="info-label">Bin</span>
+                    <span class="info-label" data-i18n="bin">Bin</span>
                     <span id="bin-text" class="info-value"></span>
                 </div>
             </div>
             <div class="info-row">
                 <span class="info-icon">💡</span>
                 <div class="info-content">
-                    <span class="info-label">Pro Tip</span>
+                    <span class="info-label" data-i18n="tip">Pro Tip</span>
                     <span id="tip-text" class="info-value"></span>
                 </div>
             </div>
+            <div id="crafts-section" class="crafts-section"></div>
         </div>
-        
-        <!-- Web Search Button -->
+
+        <!-- Points earned -->
+        <div id="points-earned" class="points-earned hidden">
+            <span>🎉</span>
+            <span id="points-earned-text">+10 Points!</span>
+        </div>
+
         <button id="search-btn" class="search-button">
-            <span>🔍 Find Reuse Ideas Online</span>
+            <span>🔍</span>
+            <span data-i18n="find_ideas">Find Reuse Ideas Online</span>
         </button>
-        
-        <button id="close-btn" class="close-button">Close</button>
+
+        <button id="close-btn" class="close-button" data-i18n="close">Close</button>
+    </div>
+
+    <!-- Challenges Modal -->
+    <div id="challenges-modal" class="modal hidden">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h3 data-i18n="challenges_title">🎯 Daily Challenges</h3>
+                <button class="close-modal" onclick="closeChallenges()">×</button>
+            </div>
+            <div class="challenges-container">
+                <div class="challenge-card active">
+                    <div class="challenge-icon">🥤</div>
+                    <div class="challenge-info">
+                        <h4 data-i18n="challenge1">Plastic Detective</h4>
+                        <p data-i18n="challenge1_desc">Scan 5 plastic items today</p>
+                        <div class="progress-bar-small">
+                            <div class="progress-fill-small" id="challenge1-progress" style="width: 40%"></div>
+                        </div>
+                        <span class="challenge-reward">+50 pts</span>
+                    </div>
+                </div>
+                <div class="challenge-card">
+                    <div class="challenge-icon">🍎</div>
+                    <div class="challenge-info">
+                        <h4 data-i18n="challenge2">Compost Champion</h4>
+                        <p data-i18n="challenge2_desc">Scan 3 compostable items</p>
+                        <div class="progress-bar-small">
+                            <div class="progress-fill-small" id="challenge2-progress" style="width: 66%"></div>
+                        </div>
+                        <span class="challenge-reward">+30 pts</span>
+                    </div>
+                </div>
+                <div class="challenge-card completed">
+                    <div class="challenge-icon">📱</div>
+                    <div class="challenge-info">
+                        <h4 data-i18n="challenge3">E-Waste Expert</h4>
+                        <p data-i18n="challenge3_desc">Learn about e-waste disposal</p>
+                        <div class="progress-bar-small">
+                            <div class="progress-fill-small" style="width: 100%"></div>
+                        </div>
+                        <span class="challenge-reward">✓ Completed</span>
+                    </div>
+                </div>
+                <div class="challenge-card weekly">
+                    <div class="challenge-icon">🌍</div>
+                    <div class="challenge-info">
+                        <h4 data-i18n="challenge4">Weekly: Eco Warrior</h4>
+                        <p data-i18n="challenge4_desc">Scan 20 items this week</p>
+                        <div class="progress-bar-small">
+                            <div class="progress-fill-small" id="challenge4-progress" style="width: 35%"></div>
+                        </div>
+                        <span class="challenge-reward">+200 pts</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaderboard Modal -->
+    <div id="leaderboard-modal" class="modal hidden">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h3 data-i18n="leaderboard_title">🏆 Community Leaderboard</h3>
+                <button class="close-modal" onclick="closeLeaderboard()">×</button>
+            </div>
+            <div class="leaderboard-tabs">
+                <button class="lb-tab active" onclick="switchLeaderboard('weekly')">This Week</button>
+                <button class="lb-tab" onclick="switchLeaderboard('monthly')">This Month</button>
+                <button class="lb-tab" onclick="switchLeaderboard('alltime')">All Time</button>
+            </div>
+            <div class="leaderboard-container" id="leaderboard-list">
+                <div class="lb-item rank-1">
+                    <span class="lb-rank">🥇</span>
+                    <div class="lb-user">
+                        <span class="lb-avatar">👤</span>
+                        <span class="lb-name">EcoWarrior_99</span>
+                    </div>
+                    <span class="lb-points">2,450 pts</span>
+                </div>
+                <div class="lb-item rank-2">
+                    <span class="lb-rank">🥈</span>
+                    <div class="lb-user">
+                        <span class="lb-avatar">👤</span>
+                        <span class="lb-name">GreenHero</span>
+                    </div>
+                    <span class="lb-points">2,180 pts</span>
+                </div>
+                <div class="lb-item rank-3">
+                    <span class="lb-rank">🥉</span>
+                    <div class="lb-user">
+                        <span class="lb-avatar">👤</span>
+                        <span class="lb-name">RecycleKing</span>
+                    </div>
+                    <span class="lb-points">1,920 pts</span>
+                </div>
+                <div class="lb-item you">
+                    <span class="lb-rank">24</span>
+                    <div class="lb-user">
+                        <span class="lb-avatar">⭐</span>
+                        <span class="lb-name">You</span>
+                    </div>
+                    <span class="lb-points" id="your-lb-points">0 pts</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Nearby Facilities Modal -->
+    <div id="nearby-modal" class="modal hidden">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h3 data-i18n="nearby_title">📍 Nearby Recycling Centers</h3>
+                <button class="close-modal" onclick="closeNearby()">×</button>
+            </div>
+            <div class="nearby-container" id="nearby-list">
+                <div class="nearby-item">
+                    <div class="nearby-icon" style="background: #4CAF50">♻️</div>
+                    <div class="nearby-info">
+                        <h4>City Recycling Center</h4>
+                        <p>📍 1.2 km away • Open until 6 PM</p>
+                        <p class="nearby-accepts">Accepts: Plastic, Paper, Glass, Metal</p>
+                    </div>
+                    <button class="nearby-directions" onclick="openDirections(0)">🧭</button>
+                </div>
+                <div class="nearby-item">
+                    <div class="nearby-icon" style="background: #F44336">📱</div>
+                    <div class="nearby-info">
+                        <h4>E-Waste Drop-off</h4>
+                        <p>📍 2.8 km away • Open 24/7</p>
+                        <p class="nearby-accepts">Accepts: Electronics, Batteries, Cables</p>
+                    </div>
+                    <button class="nearby-directions" onclick="openDirections(1)">🧭</button>
+                </div>
+                <div class="nearby-item">
+                    <div class="nearby-icon" style="background: #8BC34A">🌱</div>
+                    <div class="nearby-info">
+                        <h4>Community Compost</h4>
+                        <p>📍 0.5 km away • Weekends only</p>
+                        <p class="nearby-accepts">Accepts: Food waste, Yard waste</p>
+                    </div>
+                    <button class="nearby-directions" onclick="openDirections(2)">🧭</button>
+                </div>
+                <div class="nearby-item">
+                    <div class="nearby-icon" style="background: #FF9800">⚠️</div>
+                    <div class="nearby-info">
+                        <h4>Hazardous Waste Facility</h4>
+                        <p>📍 5.1 km away • By appointment</p>
+                        <p class="nearby-accepts">Accepts: Chemicals, Paint, Batteries</p>
+                    </div>
+                    <button class="nearby-directions" onclick="openDirections(3)">🧭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Language Modal -->
+    <div id="language-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>🌐 Select Language</h3>
+                <button class="close-modal" onclick="closeLanguageModal()">×</button>
+            </div>
+            <div class="language-list">
+                <button class="lang-option active" onclick="setLanguage('en')">🇺🇸 English</button>
+                <button class="lang-option" onclick="setLanguage('hi')">🇮🇳 हिंदी (Hindi)</button>
+                <button class="lang-option" onclick="setLanguage('es')">🇪🇸 Español</button>
+                <button class="lang-option" onclick="setLanguage('fr')">🇫🇷 Français</button>
+                <button class="lang-option" onclick="setLanguage('de')">🇩🇪 Deutsch</button>
+                <button class="lang-option" onclick="setLanguage('zh')">🇨🇳 中文</button>
+                <button class="lang-option" onclick="setLanguage('ja')">🇯🇵 日本語</button>
+                <button class="lang-option" onclick="setLanguage('ar')">🇸🇦 العربية</button>
+            </div>
+        </div>
     </div>
 
     <!-- Loading Overlay -->
@@ -108,34 +363,33 @@
                 <h3 id="search-modal-title">Searching...</h3>
                 <button id="close-modal" class="close-modal">×</button>
             </div>
-            <div id="search-results" class="search-results">
-                <div class="search-loading">
-                    <div class="spinner-small"></div>
-                    <p>Searching for creative reuse ideas...</p>
-                </div>
-            </div>
+            <div id="search-results" class="search-results"></div>
         </div>
     </div>
 
-    <!-- Instructions (first time users) -->
+    <!-- Instructions -->
     <div id="instructions" class="instructions hidden">
         <div class="instruction-card">
             <div class="instruction-icon">🌱</div>
-            <h3>Welcome to EcoScan AR!</h3>
-            <p>Point your camera at <strong>any item</strong> to see real-time recycling info.</p>
-            <p>Tap <strong>GET DETAILS</strong> for complete disposal instructions.</p>
+            <h3 data-i18n="welcome">Welcome to EcoScan AR!</h3>
+            <p data-i18n="welcome_desc">Scan any item to learn how to recycle it properly.</p>
             <div class="feature-list">
-                <div class="feature">📱 80+ Items Recognized</div>
-                <div class="feature">🔄 Real-Time Detection</div>
-                <div class="feature">🔍 Web Search for Reuse Ideas</div>
+                <div class="feature">📷 AI Object Detection</div>
+                <div class="feature">📊 Barcode Scanning</div>
+                <div class="feature">📍 Location-Based Rules</div>
+                <div class="feature">🎯 Daily Challenges</div>
+                <div class="feature">🏆 Community Leaderboard</div>
+                <div class="feature">🌐 8 Languages</div>
             </div>
-            <button id="got-it-btn">Start Scanning</button>
+            <button id="got-it-btn" data-i18n="start">Start Scanning</button>
         </div>
     </div>
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.11.0"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3"></script>
+    <script src="https://unpkg.com/@AykutSarac/barcode-detector@latest/dist/barcode-detector.min.js"></script>
     <script src="app.js"></script>
 </body>
+
 </html>

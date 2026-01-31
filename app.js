@@ -17,97 +17,100 @@ const searchModalTitle = document.getElementById('search-modal-title');
 const searchResults = document.getElementById('search-results');
 const itemsCountEl = document.getElementById('items-count');
 const co2CountEl = document.getElementById('co2-count');
+const pointsCountEl = document.getElementById('points-count');
 
 let model;
+let barcodeDetector;
 let isScanning = false;
+let isBarcodeMode = false;
 let animationFrameId = null;
 let itemsScanned = 0;
 let co2Saved = 0;
+let totalPoints = 0;
 let currentItem = '';
-let allDetectedObjects = []; // Store all detected objects
+let allDetectedObjects = [];
+let currentLanguage = 'en';
+let userLocation = { city: 'Unknown', country: 'US' };
 
-// ==================== COMPREHENSIVE RECYCLING DATABASE ====================
+// ==================== TRANSLATIONS ====================
+const translations = {
+    en: { points: 'Points', scanned: 'Scanned', camera: 'Camera', barcode: 'Barcode', get_details: 'GET DETAILS', disposal: 'Disposal', bin: 'Bin', tip: 'Pro Tip', find_ideas: 'Find Reuse Ideas', close: 'Close', home: 'Home', challenges: 'Challenges', leaderboard: 'Leaderboard', nearby: 'Nearby', welcome: 'Welcome to EcoScan AR!', start: 'Start Scanning', barcode_hint: 'Point at barcode or QR code' },
+    hi: { points: 'अंक', scanned: 'स्कैन किया', camera: 'कैमरा', barcode: 'बारकोड', get_details: 'विवरण देखें', disposal: 'निपटान', bin: 'डिब्बा', tip: 'सुझाव', find_ideas: 'पुनः उपयोग के विचार खोजें', close: 'बंद करें', home: 'होम', challenges: 'चुनौतियां', leaderboard: 'लीडरबोर्ड', nearby: 'आस-पास', welcome: 'EcoScan AR में आपका स्वागत है!', start: 'स्कैनिंग शुरू करें', barcode_hint: 'बारकोड पर कैमरा करें' },
+    es: { points: 'Puntos', scanned: 'Escaneado', camera: 'Cámara', barcode: 'Código', get_details: 'VER DETALLES', disposal: 'Disposición', bin: 'Contenedor', tip: 'Consejo', find_ideas: 'Buscar Ideas', close: 'Cerrar', home: 'Inicio', challenges: 'Retos', leaderboard: 'Ranking', nearby: 'Cercano', welcome: '¡Bienvenido a EcoScan AR!', start: 'Comenzar', barcode_hint: 'Apunta al código de barras' },
+    fr: { points: 'Points', scanned: 'Scanné', camera: 'Caméra', barcode: 'Code-barres', get_details: 'DÉTAILS', disposal: 'Élimination', bin: 'Poubelle', tip: 'Conseil', find_ideas: 'Trouver des Idées', close: 'Fermer', home: 'Accueil', challenges: 'Défis', leaderboard: 'Classement', nearby: 'Proche', welcome: 'Bienvenue sur EcoScan AR!', start: 'Commencer', barcode_hint: 'Pointez vers le code-barres' },
+    de: { points: 'Punkte', scanned: 'Gescannt', camera: 'Kamera', barcode: 'Barcode', get_details: 'DETAILS', disposal: 'Entsorgung', bin: 'Tonne', tip: 'Tipp', find_ideas: 'Ideen Finden', close: 'Schließen', home: 'Start', challenges: 'Herausforderungen', leaderboard: 'Rangliste', nearby: 'In der Nähe', welcome: 'Willkommen bei EcoScan AR!', start: 'Starten', barcode_hint: 'Auf Barcode zeigen' },
+    zh: { points: '积分', scanned: '已扫描', camera: '相机', barcode: '条码', get_details: '查看详情', disposal: '处理', bin: '垃圾桶', tip: '提示', find_ideas: '寻找创意', close: '关闭', home: '首页', challenges: '挑战', leaderboard: '排行榜', nearby: '附近', welcome: '欢迎使用 EcoScan AR!', start: '开始扫描', barcode_hint: '对准条形码' },
+    ja: { points: 'ポイント', scanned: 'スキャン', camera: 'カメラ', barcode: 'バーコード', get_details: '詳細を見る', disposal: '廃棄', bin: 'ゴミ箱', tip: 'ヒント', find_ideas: 'アイデアを探す', close: '閉じる', home: 'ホーム', challenges: 'チャレンジ', leaderboard: 'ランキング', nearby: '近く', welcome: 'EcoScan ARへようこそ!', start: 'スキャン開始', barcode_hint: 'バーコードに向けてください' },
+    ar: { points: 'نقاط', scanned: 'ممسوح', camera: 'كاميرا', barcode: 'باركود', get_details: 'عرض التفاصيل', disposal: 'التخلص', bin: 'سلة', tip: 'نصيحة', find_ideas: 'أفكار إعادة التدوير', close: 'إغلاق', home: 'الرئيسية', challenges: 'التحديات', leaderboard: 'المتصدرين', nearby: 'قريب', welcome: 'مرحبا بك في EcoScan AR!', start: 'ابدأ المسح', barcode_hint: 'وجه الكاميرا نحو الباركود' }
+};
+
+// ==================== LOCATION-BASED RECYCLING RULES ====================
+const locationRules = {
+    'US': { name: 'United States', rules: { bottle: 'Check bottle deposit - some states refund 5-10¢', pizza: 'Greasy boxes go in TRASH, not recycling', 'plastic bag': 'Return to grocery stores - NOT curbside' } },
+    'UK': { name: 'United Kingdom', rules: { bottle: 'Rinse and place in household recycling bin', pizza: 'Tear off clean parts for recycling', cup: 'Some councils accept paper cups - check locally' } },
+    'DE': { name: 'Germany', rules: { bottle: 'Pfand bottles return 25¢ deposit at store', 'plastic bag': 'Yellow bin (Gelber Sack) for packaging' } },
+    'IN': { name: 'India', rules: { bottle: 'Sell to kabadiwala for cash', 'cell phone': 'E-waste collection drives in cities', banana: 'Composting or biogas plants' } },
+    'JP': { name: 'Japan', rules: { bottle: 'Remove cap and label - separate bins', pizza: 'Boxes must be washed before recycling' } },
+    'AU': { name: 'Australia', rules: { bottle: 'Container deposit scheme - 10¢ refund', 'cell phone': 'MobileMuster free recycling program' } }
+};
+
+// ==================== PRODUCT DATABASE (Barcode) ====================
+const productDatabase = {
+    '5449000000996': { name: 'Coca-Cola 500ml', category: 'Recyclable', material: 'PET Plastic #1', instructions: 'Rinse, remove cap, recycle bottle. Cap recyclable separately.', bin: 'Plastic Recycling', co2Impact: 0.5 },
+    '8901030865527': { name: 'Lay\'s Chips', category: 'Non-Recyclable', material: 'Multi-layer plastic', instructions: 'Chip bags are NOT recyclable - mixed materials.', bin: 'General Trash', co2Impact: 0.1 },
+    '8906002680337': { name: 'Parle-G Biscuits', category: 'Non-Recyclable', material: 'Plastic wrapper', instructions: 'Wrapper is not recyclable. Consider TerraCycle.', bin: 'Trash', co2Impact: 0.1 },
+    '0012000001314': { name: 'Pepsi 2L Bottle', category: 'Recyclable', material: 'PET Plastic #1', instructions: 'Rinse thoroughly, crush to save space, recycle.', bin: 'Plastic Recycling', co2Impact: 0.6 }
+};
+
+// ==================== RECYCLING DATABASE ====================
 const recyclingGuide = {
-    'person': { category: 'Human 👋', color: '#9C27B0', icon: '👤', instructions: 'Hello! You are NOT recyclable.', bin: 'N/A', tips: 'Point camera at objects!', co2Impact: 0, crafts: [] },
-    'bicycle': { category: 'Donate/Metal', color: '#4CAF50', icon: '🚲', instructions: 'Donate working bikes. Metal frames recyclable.', bin: 'Donation / Metal Recycling', tips: 'Bike co-ops refurbish bikes!', co2Impact: 5.0, crafts: ['Wall-mounted bike shelf', 'Bike wheel clock', 'Garden trellis from bike parts'] },
-    'car': { category: 'Auto Recycling', color: '#F44336', icon: '🚗', instructions: 'Vehicles need proper end-of-life recycling.', bin: 'Auto Recycling Center', tips: 'Many charities accept car donations!', co2Impact: 1500, crafts: ['Repurpose parts as furniture', 'Tire planters', 'Hood as wall art'] },
-    'motorcycle': { category: 'Auto Recycling', color: '#F44336', icon: '🏍️', instructions: 'Contact vehicle recyclers.', bin: 'Auto Recycling Center', tips: 'Parts can be sold to enthusiasts!', co2Impact: 200, crafts: [] },
-    'bus': { category: 'Auto Recycling', color: '#F44336', icon: '🚌', instructions: 'Large vehicles need specialized recyclers.', bin: 'Commercial Vehicle Recycler', tips: 'Old buses converted into homes!', co2Impact: 5000, crafts: [] },
-    'truck': { category: 'Auto Recycling', color: '#F44336', icon: '🚚', instructions: 'Commercial truck recycling.', bin: 'Commercial Vehicle Recycler', tips: 'Truck parts have high resale value!', co2Impact: 3000, crafts: [] },
-    'boat': { category: 'Special Recycling', color: '#FF9800', icon: '⛵', instructions: 'Fiberglass difficult. Metal parts recyclable.', bin: 'Boat Recycling Facility', tips: 'Donate working boats to sailing programs!', co2Impact: 500, crafts: [] },
-    'traffic light': { category: 'E-Waste/Metal', color: '#F44336', icon: '🚦', instructions: 'Municipal property. Contains electronics.', bin: 'Municipal Recycling', tips: 'Old traffic lights are collectibles!', co2Impact: 10, crafts: [] },
-    'bench': { category: 'Mixed Materials', color: '#795548', icon: '🪑', instructions: 'Separate wood and metal for recycling.', bin: 'Bulk Waste', tips: 'Wooden benches can be refinished!', co2Impact: 5, crafts: ['Repaint as garden feature', 'Use slats for signs', 'Headboard from bench back'] },
-    'bird': { category: 'Wildlife 🐦', color: '#03A9F4', icon: '🐦', instructions: 'Living creature - not recyclable!', bin: 'N/A - Let it fly!', tips: 'Help birds by recycling!', co2Impact: 0, crafts: [] },
-    'cat': { category: 'Living Friend 🐱', color: '#E91E63', icon: '🐱', instructions: 'Your furry friend - not recyclable!', bin: 'N/A - Give treats!', tips: 'Recycle cat food cans!', co2Impact: 0, crafts: [] },
-    'dog': { category: 'Living Friend 🐕', color: '#E91E63', icon: '🐕', instructions: 'Best friend - not recyclable!', bin: 'N/A - Belly rubs!', tips: 'Donate old blankets to shelters!', co2Impact: 0, crafts: [] },
-    'horse': { category: 'Living Animal 🐴', color: '#795548', icon: '🐴', instructions: 'Living creature!', bin: 'N/A', tips: 'Support equine rescue!', co2Impact: 0, crafts: [] },
-    'sheep': { category: 'Living Animal 🐑', color: '#9E9E9E', icon: '🐑', instructions: 'Wool is renewable!', bin: 'N/A', tips: 'Wool is biodegradable!', co2Impact: 0, crafts: [] },
-    'cow': { category: 'Living Animal 🐄', color: '#795548', icon: '🐄', instructions: 'Living creature!', bin: 'N/A', tips: 'Reduce meat = help environment!', co2Impact: 0, crafts: [] },
-    'elephant': { category: 'Endangered 🐘', color: '#607D8B', icon: '🐘', instructions: 'Endangered species! Protect them.', bin: 'N/A', tips: 'Support wildlife conservation!', co2Impact: 0, crafts: [] },
-    'bear': { category: 'Wildlife 🐻', color: '#795548', icon: '🐻', instructions: 'Keep distance!', bin: 'N/A', tips: 'Use bear-proof containers camping!', co2Impact: 0, crafts: [] },
-    'zebra': { category: 'Wildlife 🦓', color: '#000000', icon: '🦓', instructions: 'Living creature!', bin: 'N/A', tips: 'Support African wildlife conservation!', co2Impact: 0, crafts: [] },
-    'giraffe': { category: 'Endangered 🦒', color: '#FF9800', icon: '🦒', instructions: 'Endangered species!', bin: 'N/A', tips: 'Help protect their habitats!', co2Impact: 0, crafts: [] },
-    'backpack': { category: 'Textile/Donate', color: '#E91E63', icon: '🎒', instructions: 'Donate if usable. Textile recycling otherwise.', bin: 'Donation Center', tips: 'Schools need backpack donations!', co2Impact: 0.5, crafts: ['Pet carrier', 'Hanging planter', 'Tool organizer', 'First aid kit bag'] },
-    'umbrella': { category: 'Mixed Materials', color: '#FF9800', icon: '☂️', instructions: 'Metal frame recyclable. Fabric goes to trash.', bin: 'Separate Materials', tips: 'Umbrella fabric for small bags!', co2Impact: 0.2, crafts: ['Tote bag from fabric', 'Jewelry organizer', 'Rain chain for garden', 'Pet shade'] },
-    'handbag': { category: 'Textile/Donate', color: '#E91E63', icon: '👜', instructions: 'Donate usable bags. Textile recycling otherwise.', bin: 'Donation Center', tips: 'Consignment shops accept quality bags!', co2Impact: 0.4, crafts: ['Storage pouch', 'Cable organizer', 'Cosmetic case', 'Pet accessory holder'] },
-    'tie': { category: 'Textile', color: '#E91E63', icon: '👔', instructions: 'Donate or textile recycling.', bin: 'Textile Recycling', tips: 'Ties make great craft materials!', co2Impact: 0.1, crafts: ['Necktie quilt', 'Bracelet', 'Phone case cover', 'Christmas ornaments'] },
-    'suitcase': { category: 'Donate/Bulk', color: '#795548', icon: '🧳', instructions: 'Donate if functional. Otherwise bulk waste.', bin: 'Donation or Bulk Pickup', tips: 'Old suitcases make cool storage!', co2Impact: 1.0, crafts: ['Pet bed', 'Medicine cabinet', 'Bookshelf', 'Side table'] },
-    'frisbee': { category: 'Plastic - Trash', color: '#FF9800', icon: '🥏', instructions: 'Hard plastic - not typically curbside recyclable.', bin: 'Trash or Donate', tips: 'Donate usable sports equipment!', co2Impact: 0.1, crafts: ['Plant saucer', 'Pet food bowl cover', 'Clock face'] },
-    'skis': { category: 'Special Recycling', color: '#607D8B', icon: '🎿', instructions: 'Composite materials - specialized recycling.', bin: 'Sports Equipment Recycler', tips: 'Donate working skis to ski swaps!', co2Impact: 2.0, crafts: ['Coat rack', 'Bench', 'Beer opener', 'Adirondack chair'] },
-    'snowboard': { category: 'Special Recycling', color: '#607D8B', icon: '🏂', instructions: 'Composite materials - specialized recycling.', bin: 'Sports Equipment Recycler', tips: 'Old snowboards make cool benches!', co2Impact: 2.0, crafts: ['Wall art', 'Bench', 'Swing', 'Shelf'] },
-    'sports ball': { category: 'Donate/Trash', color: '#FF9800', icon: '⚽', instructions: 'Donate usable balls. Deflated = trash.', bin: 'Donation or Trash', tips: 'Schools need sports equipment!', co2Impact: 0.2, crafts: ['Planter', 'Pet toy', 'Decorative bowl', 'Lamp base'] },
-    'kite': { category: 'Mixed Materials', color: '#FF9800', icon: '🪁', instructions: 'Separate fabric from plastic/wood frame.', bin: 'Trash (mixed)', tips: 'Kite festivals accept used kites!', co2Impact: 0.1, crafts: ['Wall decoration', 'Mobile', 'Gift wrap'] },
-    'baseball bat': { category: 'Donate/Wood', color: '#795548', icon: '⚾', instructions: 'Wooden bats compostable. Aluminum recyclable.', bin: 'Depends on Material', tips: 'Donate usable equipment!', co2Impact: 0.3, crafts: ['Coat rack', 'Table legs', 'Towel holder', 'Lamp base'] },
-    'baseball glove': { category: 'Donate', color: '#795548', icon: '🧤', instructions: 'Leather products - donate or trash.', bin: 'Donation Center', tips: 'Youth programs need equipment!', co2Impact: 0.3, crafts: ['Wallet', 'Keychain', 'Picture frame'] },
-    'skateboard': { category: 'Donate/Mixed', color: '#607D8B', icon: '🛹', instructions: 'Wood deck, metal trucks - separate for recycling.', bin: 'Mixed Materials', tips: 'Skateboard decks make cool art!', co2Impact: 0.5, crafts: ['Wall shelf', 'Clock', 'Swing', 'Stool', 'Guitar'] },
-    'surfboard': { category: 'Special Recycling', color: '#03A9F4', icon: '🏄', instructions: 'Fiberglass/foam - specialized recycling.', bin: 'Surfboard Recycler', tips: 'Broken boards become art!', co2Impact: 3.0, crafts: ['Bar top', 'Headboard', 'Outdoor shower', 'Wall art'] },
-    'tennis racket': { category: 'Donate', color: '#4CAF50', icon: '🎾', instructions: 'Donate to sports programs.', bin: 'Donation Center', tips: 'Community centers need equipment!', co2Impact: 0.5, crafts: ['Mirror frame', 'Jewelry holder', 'Coat rack', 'Wall art'] },
-    'bottle': { category: 'Recyclable ♻️', color: '#4CAF50', icon: '♻️', instructions: 'Rinse and remove cap. Check #1 PET or #2 HDPE.', bin: 'Blue Recycling Bin', tips: 'Crushing saves space! Caps often recyclable separately.', co2Impact: 0.5, crafts: ['Self-watering planter', 'Bird feeder', 'Pencil holder', 'Piggy bank', 'Watering can', 'Terrarium', 'Hanging garden', 'Jewelry stand'] },
-    'wine glass': { category: 'Trash/Donate', color: '#FF9800', icon: '🍷', instructions: 'Crystal contains lead - not recyclable.', bin: 'Trash or Donate intact', tips: 'Donate complete sets!', co2Impact: 0.1, crafts: ['Candle holder', 'Small planter', 'Jewelry display', 'Mini terrarium'] },
-    'cup': { category: 'Check Material', color: '#FF9800', icon: '☕', instructions: 'Paper cups have plastic lining - NOT recyclable usually.', bin: 'Trash (most cities)', tips: 'Switch to reusable cups!', co2Impact: 0.1, crafts: ['Seedling starter', 'Party decoration', 'Mini speaker', 'Organizer'] },
-    'fork': { category: 'Metal/Trash', color: '#607D8B', icon: '🍴', instructions: 'Metal: recyclable. Plastic: trash.', bin: 'Check Material', tips: 'Keep reusable utensils handy!', co2Impact: 0.1, crafts: ['Wind chime', 'Garden marker', 'Jewelry', 'Coat hook'] },
-    'knife': { category: 'Metal Recycling', color: '#607D8B', icon: '🔪', instructions: 'Wrap blade safely. Metal recycling.', bin: 'Metal Recycling', tips: 'Old knives can be sharpened and donated!', co2Impact: 0.2, crafts: ['Cheese spreader (reshape)', 'Garden tool', 'Letter opener'] },
-    'spoon': { category: 'Metal/Trash', color: '#607D8B', icon: '🥄', instructions: 'Metal: recyclable. Plastic: trash.', bin: 'Check Material', tips: 'Avoid single-use plastic!', co2Impact: 0.1, crafts: ['Wind chime', 'Garden marker', 'Cabinet handle', 'Wall hooks', 'Jewelry'] },
-    'bowl': { category: 'Check Material', color: '#FF9800', icon: '🥣', instructions: 'Glass/ceramic: special recycling. Plastic: usually trash.', bin: 'Depends on Material', tips: 'Donate usable dishes!', co2Impact: 0.2, crafts: ['Pet dish', 'Candle holder', 'Jewelry holder', 'Bird bath (large)'] },
-    'banana': { category: 'Compost 🌱', color: '#8BC34A', icon: '🍌', instructions: 'Food waste - perfect for compost.', bin: 'Compost/Organic Waste', tips: 'Peels make excellent fertilizer!', co2Impact: 0.2, crafts: ['Banana peel fertilizer', 'Polish leather shoes', 'Face mask', 'Compost tea'] },
-    'apple': { category: 'Compost 🌱', color: '#8BC34A', icon: '🍎', instructions: 'Core, seeds, all can go in compost.', bin: 'Compost Bin', tips: 'Cores decompose in 2 months!', co2Impact: 0.2, crafts: ['Apple cider vinegar', 'Bird feeder (stuff with seeds)', 'Stamp for painting'] },
-    'sandwich': { category: 'Compost 🌱', color: '#8BC34A', icon: '🥪', instructions: 'Food waste - compostable.', bin: 'Compost Bin', tips: 'Avoid wasting food!', co2Impact: 0.3, crafts: [] },
-    'orange': { category: 'Compost 🌱', color: '#8BC34A', icon: '🍊', instructions: 'Peel and fruit compostable.', bin: 'Compost Bin', tips: 'Citrus peels add nitrogen!', co2Impact: 0.2, crafts: ['Orange peel candle', 'Natural cleaner', 'Potpourri', 'Bird feeder'] },
-    'broccoli': { category: 'Compost 🌱', color: '#8BC34A', icon: '🥦', instructions: 'All parts compostable.', bin: 'Compost Bin', tips: 'Veggie scraps = great compost!', co2Impact: 0.1, crafts: [] },
-    'carrot': { category: 'Compost 🌱', color: '#8BC34A', icon: '🥕', instructions: 'Fully compostable including tops.', bin: 'Compost Bin', tips: 'Carrot tops regrow in water!', co2Impact: 0.1, crafts: ['Regrow from tops', 'Natural dye (orange)', 'Stamp for painting'] },
-    'hot dog': { category: 'Compost 🌱', color: '#8BC34A', icon: '🌭', instructions: 'Food waste - compostable.', bin: 'Compost Bin', tips: 'Meat needs hot composting.', co2Impact: 0.2, crafts: [] },
-    'pizza': { category: 'Compost (No Box)', color: '#8BC34A', icon: '🍕', instructions: 'Food: compost. Box: recycle if clean, compost if greasy.', bin: 'Compost (food) / Check box', tips: 'Greasy boxes contaminate recycling!', co2Impact: 0.3, crafts: [] },
-    'donut': { category: 'Compost 🌱', color: '#8BC34A', icon: '🍩', instructions: 'Food waste - compostable.', bin: 'Compost Bin', tips: 'Sugary foods decompose quickly!', co2Impact: 0.1, crafts: [] },
-    'cake': { category: 'Compost 🌱', color: '#8BC34A', icon: '🎂', instructions: 'Food waste - compostable.', bin: 'Compost Bin', tips: 'Containers need separate disposal.', co2Impact: 0.2, crafts: [] },
-    'cell phone': { category: 'E-Waste ⚠️', color: '#F44336', icon: '📱', instructions: 'E-waste center. Contains valuable metals.', bin: 'E-Waste Drop-off', tips: 'Best Buy, Staples accept old phones!', co2Impact: 5.0, crafts: ['Security camera', 'Baby monitor', 'Music player', 'Smart home controller', 'Digital picture frame'] },
-    'laptop': { category: 'E-Waste ⚠️', color: '#F44336', icon: '💻', instructions: 'E-waste only. Wipe personal data first!', bin: 'E-Waste Facility', tips: 'Donate working laptops to schools!', co2Impact: 8.0, crafts: ['Digital picture frame', 'Media server', 'Learning computer for kids', 'Home automation hub'] },
-    'mouse': { category: 'E-Waste ⚠️', color: '#F44336', icon: '🖱️', instructions: 'Remove batteries. Electronics only.', bin: 'E-Waste Center', tips: 'Some mice can be repaired!', co2Impact: 1.0, crafts: ['Desk decoration', 'Key holder (gut it)', 'Fidget toy'] },
-    'remote': { category: 'E-Waste ⚠️', color: '#F44336', icon: '📺', instructions: 'Remove batteries first! E-waste recycling.', bin: 'E-Waste Center', tips: 'Batteries need hazardous waste disposal.', co2Impact: 0.5, crafts: ['Scientific experiment', 'Art project', 'Key holder'] },
-    'keyboard': { category: 'E-Waste ⚠️', color: '#F44336', icon: '⌨️', instructions: 'E-waste only. NOT regular trash.', bin: 'E-Waste Facility', tips: 'Mechanical keyboards can be fixed!', co2Impact: 2.0, crafts: ['Key magnets', 'Jewelry from keycaps', 'Wall art', 'Coasters from keys'] },
-    'tv': { category: 'E-Waste ⚠️', color: '#F44336', icon: '📺', instructions: 'Large electronics need special pickup.', bin: 'E-Waste Facility / Pickup', tips: 'Many cities offer free e-waste pickup!', co2Impact: 15.0, crafts: ['Aquarium (old CRT)', 'Cat bed (CRT shell)', 'Display case'] },
-    'microwave': { category: 'E-Waste ⚠️', color: '#F44336', icon: '📻', instructions: 'Appliance recycling. Contains metal + electronics.', bin: 'Appliance Recycler', tips: 'Some utilities offer pickup!', co2Impact: 10.0, crafts: ['Storage cabinet (cleaned)', 'Bread box'] },
-    'oven': { category: 'Appliance Recycling', color: '#F44336', icon: '🔥', instructions: 'Large appliance - schedule pickup or drop-off.', bin: 'Appliance Recycler', tips: 'Retailers often accept old appliances!', co2Impact: 50.0, crafts: [] },
-    'toaster': { category: 'E-Waste ⚠️', color: '#F44336', icon: '🍞', instructions: 'Small appliance - e-waste recycling.', bin: 'E-Waste Center', tips: 'Donate working small appliances!', co2Impact: 3.0, crafts: ['Planter (clean thoroughly)', 'Desk organizer'] },
-    'sink': { category: 'Metal/Bulk', color: '#607D8B', icon: '🚰', instructions: 'Metal sinks recyclable. Porcelain = construction recycling.', bin: 'Metal or Construction Recycler', tips: 'Habitat ReStore accepts used fixtures!', co2Impact: 10.0, crafts: ['Garden planter', 'Ice bucket', 'Pet bath station'] },
-    'refrigerator': { category: 'Appliance Recycling', color: '#F44336', icon: '❄️', instructions: 'Contains refrigerant - MUST be properly recycled.', bin: 'Certified Appliance Recycler', tips: 'Many utilities PAY you to recycle old fridges!', co2Impact: 100.0, crafts: ['Outdoor storage shed', 'Smoker (with mods)', 'Planter box'] },
-    'chair': { category: 'Bulk/Donate', color: '#795548', icon: '🪑', instructions: 'Donate if usable. Schedule bulk pickup.', bin: 'Bulk Waste Pickup', tips: 'Habitat for Humanity accepts furniture!', co2Impact: 3.0, crafts: ['Pet bed', 'Plant stand', 'Swing', 'Shelf', 'Coat rack'] },
-    'couch': { category: 'Bulk Waste', color: '#795548', icon: '🛋️', instructions: 'Large furniture requires special pickup.', bin: 'Bulk Waste Pickup', tips: 'Post on FB Marketplace Free section!', co2Impact: 5.0, crafts: ['Outdoor bench (cushions removed)', 'Dog bed', 'Reading nook'] },
-    'bed': { category: 'Bulk Waste', color: '#795548', icon: '🛏️', instructions: 'Mattresses need special recycling. Frames = bulk waste.', bin: 'Mattress Recycler / Bulk', tips: 'Some cities have mattress recycling!', co2Impact: 20.0, crafts: ['Headboard as wall art', 'Garden trellis from frame', 'Bench from footboard'] },
-    'dining table': { category: 'Donate/Bulk', color: '#795548', icon: '🍽️', instructions: 'Donate if good condition. Otherwise bulk pickup.', bin: 'Donation or Bulk Waste', tips: 'Solid wood tables have high resale value!', co2Impact: 10.0, crafts: ['Desk', 'Outdoor table', 'Workbench', 'Headboard'] },
-    'toilet': { category: 'Bulk/Construction', color: '#607D8B', icon: '🚽', instructions: 'Porcelain - construction debris recycling.', bin: 'Construction Recycler', tips: 'Old toilets make quirky garden planters!', co2Impact: 5.0, crafts: ['Garden planter', 'Beverage cooler (for parties)'] },
-    'potted plant': { category: 'Compost/Mixed', color: '#8BC34A', icon: '🪴', instructions: 'Soil: compost. Pot: depends on material.', bin: 'Compost (soil) / Check pot', tips: 'Clay pots can be broken for drainage!', co2Impact: 0.3, crafts: ['Fairy garden', 'Succulent arrangement', 'Herb garden', 'Candle holder'] },
-    'vase': { category: 'Glass Recycling', color: '#4CAF50', icon: '🏺', instructions: 'Glass vases recyclable. Ceramic may not be.', bin: 'Glass Recycling', tips: 'Donate decorative vases!', co2Impact: 0.4, crafts: ['Candle holder', 'Terrarium', 'Makeup brush holder', 'Utensil holder'] },
-    'clock': { category: 'E-Waste/Donate', color: '#F44336', icon: '🕐', instructions: 'Remove batteries. Electronic clocks = e-waste.', bin: 'E-Waste Center', tips: 'Antique clocks have collector value!', co2Impact: 0.5, crafts: ['Wall art', 'New clock mechanism', 'Mirror frame', 'Photo display'] },
-    'mirror': { category: 'Trash (Special)', color: '#FF9800', icon: '🪞', instructions: 'NOT recyclable with regular glass. Wrap carefully.', bin: 'Trash (well-wrapped)', tips: 'Donate intact mirrors!', co2Impact: 1.0, crafts: ['Mosaic art', 'Jewelry tray', 'Garden reflection art'] },
-    'book': { category: 'Paper Recycling', color: '#4CAF50', icon: '📚', instructions: 'Remove hard covers. Pages recyclable.', bin: 'Paper Recycling', tips: 'Donate to Little Free Libraries!', co2Impact: 0.4, crafts: ['Book safe', 'Folded book art', 'Book planter', 'Journal from pages', 'Gift wrapping paper'] },
-    'scissors': { category: 'Metal Recycling', color: '#607D8B', icon: '✂️', instructions: 'Metal recyclable. Separate plastic handles.', bin: 'Metal Recycling', tips: 'Donate working scissors to schools!', co2Impact: 0.3, crafts: ['Garden shears', 'Art piece', 'Letter opener'] },
-    'teddy bear': { category: 'Textile/Donate', color: '#E91E63', icon: '🧸', instructions: 'Donate if good condition. Textile recycling otherwise.', bin: 'Donation / Textile', tips: 'Clean toys go to hospitals and shelters!', co2Impact: 0.3, crafts: ['Memory pillow', 'Pet toy', 'Decorative storage'] },
-    'hair drier': { category: 'E-Waste ⚠️', color: '#F44336', icon: '💇', instructions: 'Small appliance - e-waste recycling.', bin: 'E-Waste Center', tips: 'Cord can be recycled for copper!', co2Impact: 1.0, crafts: ['Cord for crafts', 'Scientific experiments'] },
-    'toothbrush': { category: 'Special/Trash', color: '#FF9800', icon: '🪥', instructions: 'TerraCycle accepts toothbrushes. Otherwise trash.', bin: 'TerraCycle or Trash', tips: 'Switch to bamboo toothbrushes!', co2Impact: 0.05, crafts: ['Cleaning tool', 'Art brush', 'Jewelry cleaner', 'Garden marker'] }
+    'person': { category: 'Human 👋', color: '#9C27B0', icon: '👤', instructions: 'Hello! You are NOT recyclable.', bin: 'N/A', tips: 'Point camera at objects!', co2Impact: 0, crafts: [], points: 0 },
+    'bicycle': { category: 'Donate/Metal', color: '#4CAF50', icon: '🚲', instructions: 'Donate working bikes. Metal frames recyclable.', bin: 'Donation / Metal', tips: 'Bike co-ops refurbish bikes!', co2Impact: 5.0, crafts: ['Wall shelf', 'Clock', 'Garden trellis'], points: 15 },
+    'car': { category: 'Auto Recycling', color: '#F44336', icon: '🚗', instructions: 'Vehicles need proper end-of-life recycling.', bin: 'Auto Recycler', tips: 'Charities accept car donations!', co2Impact: 1500, crafts: ['Tire planters', 'Parts furniture'], points: 50 },
+    'backpack': { category: 'Textile/Donate', color: '#E91E63', icon: '🎒', instructions: 'Donate if usable. Textile recycling otherwise.', bin: 'Donation Center', tips: 'Schools need backpacks!', co2Impact: 0.5, crafts: ['Pet carrier', 'Tool organizer'], points: 10 },
+    'umbrella': { category: 'Mixed Materials', color: '#FF9800', icon: '☂️', instructions: 'Metal frame recyclable. Fabric to trash.', bin: 'Separate Materials', tips: 'Fabric for small bags!', co2Impact: 0.2, crafts: ['Tote bag', 'Rain chain'], points: 8 },
+    'handbag': { category: 'Textile/Donate', color: '#E91E63', icon: '👜', instructions: 'Donate usable bags.', bin: 'Donation', tips: 'Consignment shops accept quality bags!', co2Impact: 0.4, crafts: ['Storage pouch', 'Cable organizer'], points: 10 },
+    'bottle': { category: 'Recyclable ♻️', color: '#4CAF50', icon: '♻️', instructions: 'Rinse and remove cap. Check plastic number.', bin: 'Blue Recycling Bin', tips: 'Crush to save space!', co2Impact: 0.5, crafts: ['Self-watering planter', 'Bird feeder', 'Piggy bank', 'Terrarium'], points: 10 },
+    'wine glass': { category: 'Trash/Donate', color: '#FF9800', icon: '🍷', instructions: 'Crystal contains lead - not recyclable.', bin: 'Trash or Donate', tips: 'Donate complete sets!', co2Impact: 0.1, crafts: ['Candle holder', 'Mini terrarium'], points: 5 },
+    'cup': { category: 'Check Material', color: '#FF9800', icon: '☕', instructions: 'Paper cups have plastic lining - NOT recyclable.', bin: 'Trash (most cities)', tips: 'Use reusable cups!', co2Impact: 0.1, crafts: ['Seedling starter', 'Party decoration'], points: 5 },
+    'fork': { category: 'Metal/Trash', color: '#607D8B', icon: '🍴', instructions: 'Metal: recyclable. Plastic: trash.', bin: 'Check Material', tips: 'Carry reusable utensils!', co2Impact: 0.1, crafts: ['Wind chime', 'Garden marker'], points: 5 },
+    'knife': { category: 'Metal Recycling', color: '#607D8B', icon: '🔪', instructions: 'Wrap blade safely.', bin: 'Metal Recycling', tips: 'Sharpen and donate!', co2Impact: 0.2, crafts: ['Letter opener'], points: 5 },
+    'spoon': { category: 'Metal/Trash', color: '#607D8B', icon: '🥄', instructions: 'Metal: recyclable. Plastic: trash.', bin: 'Check Material', tips: 'Avoid single-use!', co2Impact: 0.1, crafts: ['Wind chime', 'Wall hooks'], points: 5 },
+    'bowl': { category: 'Check Material', color: '#FF9800', icon: '🥣', instructions: 'Glass/ceramic: special recycling.', bin: 'Check Material', tips: 'Donate usable dishes!', co2Impact: 0.2, crafts: ['Pet dish', 'Candle holder'], points: 5 },
+    'banana': { category: 'Compost 🌱', color: '#8BC34A', icon: '🍌', instructions: 'Perfect for compost.', bin: 'Compost Bin', tips: 'Great fertilizer!', co2Impact: 0.2, crafts: ['Natural polish', 'Face mask'], points: 8 },
+    'apple': { category: 'Compost 🌱', color: '#8BC34A', icon: '🍎', instructions: 'All parts compostable.', bin: 'Compost Bin', tips: 'Cores decompose fast!', co2Impact: 0.2, crafts: ['Bird feeder', 'Stamp'], points: 8 },
+    'orange': { category: 'Compost 🌱', color: '#8BC34A', icon: '🍊', instructions: 'Peel and fruit compostable.', bin: 'Compost Bin', tips: 'Peels add nitrogen!', co2Impact: 0.2, crafts: ['Candle', 'Potpourri'], points: 8 },
+    'sandwich': { category: 'Compost 🌱', color: '#8BC34A', icon: '🥪', instructions: 'Food waste - compostable.', bin: 'Compost', tips: 'Avoid food waste!', co2Impact: 0.3, crafts: [], points: 8 },
+    'pizza': { category: 'Compost (No Box)', color: '#8BC34A', icon: '🍕', instructions: 'Food: compost. Greasy box: trash.', bin: 'Compost/Trash', tips: 'Greasy boxes contaminate recycling!', co2Impact: 0.3, crafts: [], points: 8 },
+    'cell phone': { category: 'E-Waste ⚠️', color: '#F44336', icon: '📱', instructions: 'E-waste center. Valuable metals inside.', bin: 'E-Waste Drop-off', tips: 'Best Buy accepts phones!', co2Impact: 5.0, crafts: ['Security camera', 'Music player'], points: 20 },
+    'laptop': { category: 'E-Waste ⚠️', color: '#F44336', icon: '💻', instructions: 'E-waste only. Wipe data first!', bin: 'E-Waste Facility', tips: 'Donate working laptops!', co2Impact: 8.0, crafts: ['Digital frame', 'Media server'], points: 25 },
+    'mouse': { category: 'E-Waste ⚠️', color: '#F44336', icon: '🖱️', instructions: 'Remove batteries. Electronics only.', bin: 'E-Waste', tips: 'Some can be repaired!', co2Impact: 1.0, crafts: ['Desk decoration'], points: 10 },
+    'remote': { category: 'E-Waste ⚠️', color: '#F44336', icon: '📺', instructions: 'Remove batteries first!', bin: 'E-Waste', tips: 'Batteries = hazardous waste.', co2Impact: 0.5, crafts: ['Key holder'], points: 8 },
+    'keyboard': { category: 'E-Waste ⚠️', color: '#F44336', icon: '⌨️', instructions: 'E-waste only. NOT regular trash.', bin: 'E-Waste Facility', tips: 'Mechanical ones can be fixed!', co2Impact: 2.0, crafts: ['Key magnets', 'Wall art'], points: 12 },
+    'tv': { category: 'E-Waste ⚠️', color: '#F44336', icon: '📺', instructions: 'Large electronics need special pickup.', bin: 'E-Waste Pickup', tips: 'Free e-waste pickup in many cities!', co2Impact: 15.0, crafts: ['Cat bed (CRT)'], points: 30 },
+    'chair': { category: 'Bulk/Donate', color: '#795548', icon: '🪑', instructions: 'Donate if usable. Schedule bulk pickup.', bin: 'Bulk Waste', tips: 'Habitat for Humanity accepts furniture!', co2Impact: 3.0, crafts: ['Pet bed', 'Swing'], points: 15 },
+    'couch': { category: 'Bulk Waste', color: '#795548', icon: '🛋️', instructions: 'Large furniture needs special pickup.', bin: 'Bulk Pickup', tips: 'Post on FB Marketplace Free!', co2Impact: 5.0, crafts: ['Dog bed'], points: 20 },
+    'bed': { category: 'Bulk Waste', color: '#795548', icon: '🛏️', instructions: 'Mattresses need special recycling.', bin: 'Mattress Recycler', tips: 'Some cities have mattress recycling!', co2Impact: 20.0, crafts: ['Garden trellis'], points: 25 },
+    'potted plant': { category: 'Compost/Mixed', color: '#8BC34A', icon: '🪴', instructions: 'Soil: compost. Pot: check material.', bin: 'Compost (soil)', tips: 'Clay pots for drainage!', co2Impact: 0.3, crafts: ['Fairy garden'], points: 8 },
+    'vase': { category: 'Glass Recycling', color: '#4CAF50', icon: '🏺', instructions: 'Glass vases recyclable.', bin: 'Glass Recycling', tips: 'Donate decorative vases!', co2Impact: 0.4, crafts: ['Candle holder', 'Terrarium'], points: 10 },
+    'clock': { category: 'E-Waste/Donate', color: '#F44336', icon: '🕐', instructions: 'Remove batteries. Electronic = e-waste.', bin: 'E-Waste', tips: 'Antiques have collector value!', co2Impact: 0.5, crafts: ['Wall art'], points: 8 },
+    'book': { category: 'Paper Recycling', color: '#4CAF50', icon: '📚', instructions: 'Remove hard covers. Pages recyclable.', bin: 'Paper Recycling', tips: 'Donate to Little Free Libraries!', co2Impact: 0.4, crafts: ['Book safe', 'Art', 'Planter'], points: 10 },
+    'scissors': { category: 'Metal Recycling', color: '#607D8B', icon: '✂️', instructions: 'Metal recyclable.', bin: 'Metal Recycling', tips: 'Donate working ones!', co2Impact: 0.3, crafts: ['Art piece'], points: 8 },
+    'teddy bear': { category: 'Textile/Donate', color: '#E91E63', icon: '🧸', instructions: 'Donate if good condition.', bin: 'Donation', tips: 'Clean toys to hospitals!', co2Impact: 0.3, crafts: ['Memory pillow'], points: 10 },
+    'toothbrush': { category: 'Special/Trash', color: '#FF9800', icon: '🪥', instructions: 'TerraCycle accepts toothbrushes.', bin: 'TerraCycle or Trash', tips: 'Try bamboo toothbrushes!', co2Impact: 0.05, crafts: ['Cleaning tool', 'Art brush'], points: 5 },
+    'sports ball': { category: 'Donate/Trash', color: '#FF9800', icon: '⚽', instructions: 'Donate usable balls.', bin: 'Donation or Trash', tips: 'Schools need equipment!', co2Impact: 0.2, crafts: ['Planter', 'Pet toy'], points: 8 },
+    'skateboard': { category: 'Donate/Mixed', color: '#607D8B', icon: '🛹', instructions: 'Wood deck, metal trucks - separate.', bin: 'Mixed Materials', tips: 'Decks make cool art!', co2Impact: 0.5, crafts: ['Wall shelf', 'Clock', 'Swing'], points: 12 },
+    'tennis racket': { category: 'Donate', color: '#4CAF50', icon: '🎾', instructions: 'Donate to sports programs.', bin: 'Donation', tips: 'Rec centers need equipment!', co2Impact: 0.5, crafts: ['Mirror frame', 'Jewelry holder'], points: 10 },
+    'suitcase': { category: 'Donate/Bulk', color: '#795548', icon: '🧳', instructions: 'Donate if functional.', bin: 'Donation or Bulk', tips: 'Make cool storage!', co2Impact: 1.0, crafts: ['Pet bed', 'Cabinet'], points: 12 },
+    'bird': { category: 'Wildlife 🐦', color: '#03A9F4', icon: '🐦', instructions: 'Living creature!', bin: 'N/A', tips: 'Help birds by recycling!', co2Impact: 0, crafts: [], points: 0 },
+    'cat': { category: 'Pet 🐱', color: '#E91E63', icon: '🐱', instructions: 'Your furry friend!', bin: 'N/A', tips: 'Recycle cat food cans!', co2Impact: 0, crafts: [], points: 0 },
+    'dog': { category: 'Pet 🐕', color: '#E91E63', icon: '🐕', instructions: 'Best friend!', bin: 'N/A', tips: 'Donate blankets to shelters!', co2Impact: 0, crafts: [], points: 0 }
 };
 
 // ==================== INITIALIZATION ====================
 async function init() {
+    loadSavedData();
+
     if (!localStorage.getItem('ecoscan-visited')) {
         instructionsDiv.classList.remove('hidden');
     }
@@ -122,13 +125,35 @@ async function init() {
     try {
         await setupCamera();
         await loadModel();
+        await initBarcodeScanner();
+        await detectUserLocation();
         loadingDiv.classList.add('hidden');
         startRealTimeDetection();
+        applyLanguage(currentLanguage);
     } catch (error) {
         console.error('Init error:', error);
-        alert('Error: Could not access camera or load model.');
+        alert('Error: ' + error.message);
         loadingDiv.classList.add('hidden');
     }
+}
+
+function loadSavedData() {
+    totalPoints = parseInt(localStorage.getItem('ecoscan-points') || '0');
+    itemsScanned = parseInt(localStorage.getItem('ecoscan-items') || '0');
+    co2Saved = parseFloat(localStorage.getItem('ecoscan-co2') || '0');
+    currentLanguage = localStorage.getItem('ecoscan-lang') || 'en';
+
+    pointsCountEl.textContent = totalPoints;
+    itemsCountEl.textContent = itemsScanned;
+    co2CountEl.textContent = co2Saved.toFixed(1);
+    document.getElementById('your-lb-points').textContent = totalPoints + ' pts';
+}
+
+function saveData() {
+    localStorage.setItem('ecoscan-points', totalPoints);
+    localStorage.setItem('ecoscan-items', itemsScanned);
+    localStorage.setItem('ecoscan-co2', co2Saved);
+    localStorage.setItem('ecoscan-lang', currentLanguage);
 }
 
 // ==================== CAMERA SETUP ====================
@@ -153,7 +178,49 @@ async function loadModel() {
     console.log('✅ COCO-SSD Model loaded');
 }
 
-// ==================== REAL-TIME DETECTION LOOP ====================
+// ==================== BARCODE SCANNER ====================
+async function initBarcodeScanner() {
+    if ('BarcodeDetector' in window) {
+        barcodeDetector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'qr_code', 'code_128'] });
+        console.log('✅ Barcode Scanner ready');
+    } else {
+        console.log('⚠️ BarcodeDetector not supported - using polyfill');
+        barcodeDetector = null;
+    }
+}
+
+// ==================== LOCATION DETECTION ====================
+async function detectUserLocation() {
+    try {
+        const response = await fetch('https://ipapi.co/json/');
+        const data = await response.json();
+        userLocation = { city: data.city || 'Unknown', country: data.country_code || 'US' };
+        document.getElementById('location-name').textContent = `${userLocation.city}, ${userLocation.country}`;
+    } catch (error) {
+        userLocation = { city: 'Unknown', country: 'US' };
+        document.getElementById('location-name').textContent = 'Location unavailable';
+    }
+}
+
+// ==================== MODE SWITCHING ====================
+function switchMode(mode) {
+    isBarcodeMode = (mode === 'barcode');
+
+    document.getElementById('camera-mode-btn').classList.toggle('active', !isBarcodeMode);
+    document.getElementById('barcode-mode-btn').classList.toggle('active', isBarcodeMode);
+    document.getElementById('barcode-overlay').classList.toggle('hidden', !isBarcodeMode);
+    document.getElementById('live-text').textContent = isBarcodeMode ? 'BARCODE' : 'LIVE';
+
+    if (isBarcodeMode) {
+        scanIcon.textContent = '📊';
+        scanText.textContent = 'SCAN BARCODE';
+    } else {
+        scanIcon.textContent = '♻️';
+        scanText.textContent = translations[currentLanguage].get_details;
+    }
+}
+
+// ==================== REAL-TIME DETECTION ====================
 function startRealTimeDetection() {
     async function detectLoop() {
         if (!model || !resultDiv.classList.contains('hidden')) {
@@ -163,16 +230,22 @@ function startRealTimeDetection() {
 
         try {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            const predictions = await model.detect(video);
 
-            // Filter predictions with confidence > 45%
-            allDetectedObjects = predictions.filter(p => p.score > 0.45);
+            if (isBarcodeMode && barcodeDetector) {
+                // Barcode detection mode
+                const barcodes = await barcodeDetector.detect(video);
+                if (barcodes.length > 0) {
+                    handleBarcodeDetection(barcodes[0]);
+                }
+            } else {
+                // Object detection mode
+                const predictions = await model.detect(video);
+                allDetectedObjects = predictions.filter(p => p.score > 0.45);
 
-            if (allDetectedObjects.length > 0) {
-                allDetectedObjects.forEach((prediction, index) => {
-                    drawRealTimeBoundingBox(prediction, index);
-                });
-                currentItem = allDetectedObjects[0].class;
+                if (allDetectedObjects.length > 0) {
+                    allDetectedObjects.forEach((pred, idx) => drawBoundingBox(pred, idx));
+                    currentItem = allDetectedObjects[0].class;
+                }
             }
         } catch (error) {
             console.error('Detection error:', error);
@@ -183,14 +256,49 @@ function startRealTimeDetection() {
     detectLoop();
 }
 
-// ==================== DRAWING FUNCTIONS ====================
-function drawRealTimeBoundingBox(prediction, index) {
+// ==================== BARCODE HANDLING ====================
+function handleBarcodeDetection(barcode) {
+    const code = barcode.rawValue;
+    const product = productDatabase[code];
+
+    if (product) {
+        showBarcodeResult(product, code);
+    } else {
+        showBarcodeResult({
+            name: 'Unknown Product',
+            category: 'Check Packaging',
+            material: 'Unknown',
+            instructions: `Barcode: ${code}. Check product packaging for recycling symbols.`,
+            bin: 'Check Packaging',
+            co2Impact: 0.1
+        }, code);
+    }
+}
+
+function showBarcodeResult(product, code) {
+    document.getElementById('result-icon').textContent = '📊';
+    document.getElementById('result-title').textContent = product.name;
+
+    const categoryEl = document.getElementById('result-category');
+    categoryEl.textContent = product.category;
+    categoryEl.style.background = product.category.includes('Recyclable') ? '#4CAF50' : '#FF9800';
+
+    document.getElementById('disposal-text').textContent = product.instructions;
+    document.getElementById('bin-text').textContent = product.bin;
+    document.getElementById('tip-text').textContent = `Material: ${product.material}`;
+
+    updateStats(product.name, product.co2Impact, 15);
+    resultDiv.classList.remove('hidden');
+    currentItem = product.name;
+}
+
+// ==================== DRAWING ====================
+function drawBoundingBox(prediction, index) {
     const guide = recyclingGuide[prediction.class];
     const color = guide ? guide.color : '#00BFFF';
     const [x, y, width, height] = prediction.bbox;
     const confidence = Math.round(prediction.score * 100);
 
-    // Glowing box
     ctx.shadowColor = color;
     ctx.shadowBlur = 15;
     ctx.strokeStyle = color;
@@ -198,25 +306,15 @@ function drawRealTimeBoundingBox(prediction, index) {
     ctx.strokeRect(x, y, width, height);
     ctx.shadowBlur = 0;
 
-    // Corner accents
     const cs = Math.min(20, width / 4, height / 4);
     ctx.lineWidth = 4;
     ctx.lineCap = 'round';
 
-    ctx.beginPath();
-    ctx.moveTo(x, y + cs); ctx.lineTo(x, y); ctx.lineTo(x + cs, y);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(x + width - cs, y); ctx.lineTo(x + width, y); ctx.lineTo(x + width, y + cs);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(x, y + height - cs); ctx.lineTo(x, y + height); ctx.lineTo(x + cs, y + height);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(x + width - cs, y + height); ctx.lineTo(x + width, y + height); ctx.lineTo(x + width, y + height - cs);
-    ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x, y + cs); ctx.lineTo(x, y); ctx.lineTo(x + cs, y); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x + width - cs, y); ctx.lineTo(x + width, y); ctx.lineTo(x + width, y + cs); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x, y + height - cs); ctx.lineTo(x, y + height); ctx.lineTo(x + cs, y + height); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x + width - cs, y + height); ctx.lineTo(x + width, y + height); ctx.lineTo(x + width, y + height - cs); ctx.stroke();
 
-    // Label with number for selection
     const icon = guide ? guide.icon : '🔍';
     const labelText = `${index + 1}. ${icon} ${prediction.class.toUpperCase()} ${confidence}%`;
     ctx.font = 'bold 13px Inter, sans-serif';
@@ -249,73 +347,115 @@ function roundRect(ctx, x, y, w, h, r) {
     ctx.closePath();
 }
 
-// ==================== SCAN - SHOW ALL OBJECTS ====================
+// ==================== SCAN HANDLER ====================
 async function detectObject() {
-    if (!model) {
-        alert('AI model loading...');
-        return;
-    }
+    if (!model) return;
 
     isScanning = true;
     updateScanButton();
 
-    const predictions = await model.detect(video);
-    allDetectedObjects = predictions.filter(p => p.score > 0.4);
-
-    if (allDetectedObjects.length > 0) {
-        showObjectSelectionList(allDetectedObjects);
+    if (isBarcodeMode && barcodeDetector) {
+        const barcodes = await barcodeDetector.detect(video);
+        if (barcodes.length > 0) {
+            handleBarcodeDetection(barcodes[0]);
+        } else {
+            alert('No barcode found. Try adjusting camera angle.');
+        }
     } else {
-        alert('No objects detected. Try moving closer or adjusting lighting.');
+        const predictions = await model.detect(video);
+        allDetectedObjects = predictions.filter(p => p.score > 0.4);
+
+        if (allDetectedObjects.length > 0) {
+            showObjectSelectionList(allDetectedObjects);
+        } else {
+            alert('No objects detected. Try moving closer.');
+        }
     }
 
     isScanning = false;
     updateScanButton();
 }
 
-// ==================== SHOW OBJECT SELECTION LIST ====================
 function showObjectSelectionList(objects) {
-    // Create/update object list in result div
-    const guide = recyclingGuide[objects[0].class] || getDefaultGuide(objects[0].class);
-
     let objectListHTML = `<div class="object-list-container">
-        <h4 class="object-list-title">📋 ${objects.length} Objects Detected - Tap to Select:</h4>
+        <h4 class="object-list-title">📋 ${objects.length} Objects - Tap to Select:</h4>
         <div class="object-list">`;
 
     objects.forEach((obj, index) => {
         const g = recyclingGuide[obj.class] || { icon: '🔍', category: 'Unknown', color: '#607D8B' };
         const confidence = Math.round(obj.score * 100);
-        objectListHTML += `
-            <button class="object-item ${index === 0 ? 'selected' : ''}" onclick="selectObject(${index})" style="border-color: ${g.color}">
-                <span class="obj-num">${index + 1}</span>
-                <span class="obj-icon">${g.icon}</span>
-                <span class="obj-name">${obj.class}</span>
-                <span class="obj-conf">${confidence}%</span>
-            </button>`;
+        objectListHTML += `<button class="object-item ${index === 0 ? 'selected' : ''}" onclick="selectObject(${index})" style="border-color: ${g.color}">
+            <span class="obj-num">${index + 1}</span>
+            <span class="obj-icon">${g.icon}</span>
+            <span class="obj-name">${obj.class}</span>
+            <span class="obj-conf">${confidence}%</span>
+        </button>`;
     });
 
     objectListHTML += '</div></div>';
-
-    // Show first object details
     showResult(objects[0].class, objectListHTML);
-    updateStats(objects[0].class);
-    currentItem = objects[0].class;
 }
 
-// Global function to select object
 window.selectObject = function (index) {
     if (allDetectedObjects[index]) {
         const itemName = allDetectedObjects[index].class;
         currentItem = itemName;
-
-        // Update selection UI
-        document.querySelectorAll('.object-item').forEach((el, i) => {
-            el.classList.toggle('selected', i === index);
-        });
-
-        // Update result content
+        document.querySelectorAll('.object-item').forEach((el, i) => el.classList.toggle('selected', i === index));
         updateResultContent(itemName);
     }
 };
+
+// ==================== SHOW RESULT ====================
+function showResult(itemName, objectListHTML = '') {
+    const guide = recyclingGuide[itemName] || getDefaultGuide(itemName);
+
+    document.getElementById('result-icon').textContent = guide.icon;
+    document.getElementById('result-title').textContent = itemName.charAt(0).toUpperCase() + itemName.slice(1);
+
+    const categoryEl = document.getElementById('result-category');
+    categoryEl.textContent = guide.category;
+    categoryEl.style.background = guide.color;
+
+    document.getElementById('disposal-text').textContent = guide.instructions;
+    document.getElementById('bin-text').textContent = guide.bin;
+    document.getElementById('tip-text').textContent = guide.tips;
+
+    // Location-specific rules
+    const locRules = locationRules[userLocation.country];
+    const locRulesDiv = document.getElementById('location-rules');
+    if (locRules && locRules.rules[itemName]) {
+        document.getElementById('location-rules-title').textContent = `📍 ${locRules.name} Rules`;
+        document.getElementById('location-rules-text').textContent = locRules.rules[itemName];
+        locRulesDiv.style.display = 'block';
+    } else {
+        locRulesDiv.style.display = 'none';
+    }
+
+    // Object list
+    let objectListSection = document.getElementById('object-list-section');
+    objectListSection.innerHTML = objectListHTML;
+
+    // Crafts
+    let craftsSection = document.getElementById('crafts-section');
+    if (guide.crafts && guide.crafts.length > 0) {
+        craftsSection.innerHTML = `<div class="crafts-title">🎨 DIY Ideas:</div>
+            <div class="crafts-list">${guide.crafts.map(c => `<span class="craft-tag">${c}</span>`).join('')}</div>`;
+        craftsSection.style.display = 'block';
+    } else {
+        craftsSection.style.display = 'none';
+    }
+
+    // Points
+    if (guide.points > 0) {
+        const pointsDiv = document.getElementById('points-earned');
+        document.getElementById('points-earned-text').textContent = `+${guide.points} Points!`;
+        pointsDiv.classList.remove('hidden');
+        setTimeout(() => pointsDiv.classList.add('hidden'), 2000);
+    }
+
+    updateStats(itemName, guide.co2Impact, guide.points);
+    resultDiv.classList.remove('hidden');
+}
 
 function updateResultContent(itemName) {
     const guide = recyclingGuide[itemName] || getDefaultGuide(itemName);
@@ -331,94 +471,47 @@ function updateResultContent(itemName) {
     document.getElementById('bin-text').textContent = guide.bin;
     document.getElementById('tip-text').textContent = guide.tips;
 
-    // Update crafts section
+    // Location rules
+    const locRules = locationRules[userLocation.country];
+    const locRulesDiv = document.getElementById('location-rules');
+    if (locRules && locRules.rules[itemName]) {
+        document.getElementById('location-rules-title').textContent = `📍 ${locRules.name} Rules`;
+        document.getElementById('location-rules-text').textContent = locRules.rules[itemName];
+        locRulesDiv.style.display = 'block';
+    } else {
+        locRulesDiv.style.display = 'none';
+    }
+
+    // Crafts
     const craftsSection = document.getElementById('crafts-section');
-    if (craftsSection && guide.crafts && guide.crafts.length > 0) {
-        craftsSection.innerHTML = `
-            <div class="crafts-title">🎨 DIY Craft Ideas:</div>
-            <div class="crafts-list">
-                ${guide.crafts.map(c => `<span class="craft-tag">${c}</span>`).join('')}
-            </div>`;
+    if (guide.crafts && guide.crafts.length > 0) {
+        craftsSection.innerHTML = `<div class="crafts-title">🎨 DIY Ideas:</div>
+            <div class="crafts-list">${guide.crafts.map(c => `<span class="craft-tag">${c}</span>`).join('')}</div>`;
         craftsSection.style.display = 'block';
-    } else if (craftsSection) {
+    } else {
         craftsSection.style.display = 'none';
     }
 }
 
 function getDefaultGuide(itemName) {
-    return {
-        category: 'Unknown Item',
-        color: '#607D8B',
-        icon: '🔍',
-        instructions: `"${itemName}" not in database. Check local recycling guidelines.`,
-        bin: 'Check Local Guidelines',
-        tips: 'Visit your city recycling website for proper disposal.',
-        co2Impact: 0.1,
-        crafts: []
-    };
+    return { category: 'Unknown', color: '#607D8B', icon: '🔍', instructions: `"${itemName}" not in database.`, bin: 'Check Local', tips: 'Check packaging for recycling symbols.', co2Impact: 0.1, crafts: [], points: 5 };
 }
 
-// ==================== RESULTS DISPLAY ====================
-function showResult(itemName, objectListHTML = '') {
-    const guide = recyclingGuide[itemName] || getDefaultGuide(itemName);
-
-    document.getElementById('result-icon').textContent = guide.icon;
-    document.getElementById('result-title').textContent = itemName.charAt(0).toUpperCase() + itemName.slice(1);
-
-    const categoryEl = document.getElementById('result-category');
-    categoryEl.textContent = guide.category;
-    categoryEl.style.background = guide.color;
-    categoryEl.style.color = 'white';
-
-    document.getElementById('disposal-text').textContent = guide.instructions;
-    document.getElementById('bin-text').textContent = guide.bin;
-    document.getElementById('tip-text').textContent = guide.tips;
-
-    // Add object list if multiple objects
-    let objectListContainer = document.getElementById('object-list-section');
-    if (!objectListContainer) {
-        objectListContainer = document.createElement('div');
-        objectListContainer.id = 'object-list-section';
-        resultDiv.insertBefore(objectListContainer, document.getElementById('result-header'));
-    }
-    objectListContainer.innerHTML = objectListHTML;
-
-    // Add crafts section
-    let craftsSection = document.getElementById('crafts-section');
-    if (!craftsSection) {
-        craftsSection = document.createElement('div');
-        craftsSection.id = 'crafts-section';
-        craftsSection.className = 'crafts-section';
-        document.getElementById('result-content').appendChild(craftsSection);
-    }
-
-    if (guide.crafts && guide.crafts.length > 0) {
-        craftsSection.innerHTML = `
-            <div class="crafts-title">🎨 DIY Craft Ideas:</div>
-            <div class="crafts-list">
-                ${guide.crafts.map(c => `<span class="craft-tag">${c}</span>`).join('')}
-            </div>`;
-        craftsSection.style.display = 'block';
-    } else {
-        craftsSection.style.display = 'none';
-    }
-
-    resultDiv.classList.remove('hidden');
-}
-
-// ==================== STATS UPDATE ====================
-function updateStats(itemName) {
+// ==================== STATS ====================
+function updateStats(itemName, co2 = 0, points = 10) {
     itemsScanned++;
-    itemsCountEl.textContent = itemsScanned;
+    co2Saved += co2 || 0;
+    totalPoints += points || 10;
 
-    const guide = recyclingGuide[itemName];
-    if (guide && guide.co2Impact) {
-        co2Saved += guide.co2Impact;
-        co2CountEl.textContent = co2Saved.toFixed(1);
-    }
+    itemsCountEl.textContent = itemsScanned;
+    co2CountEl.textContent = co2Saved.toFixed(1);
+    pointsCountEl.textContent = totalPoints;
+    document.getElementById('your-lb-points').textContent = totalPoints + ' pts';
+
+    saveData();
+    updateChallengeProgress();
 }
 
-// ==================== UI UPDATES ====================
 function updateScanButton() {
     if (isScanning) {
         scanBtn.classList.add('scanning');
@@ -426,74 +519,117 @@ function updateScanButton() {
         scanText.textContent = 'ANALYZING...';
     } else {
         scanBtn.classList.remove('scanning');
-        scanIcon.textContent = '♻️';
-        scanText.textContent = 'GET DETAILS';
+        scanIcon.textContent = isBarcodeMode ? '📊' : '♻️';
+        scanText.textContent = isBarcodeMode ? 'SCAN BARCODE' : translations[currentLanguage].get_details;
     }
 }
 
-// ==================== WEB SEARCH ====================
+// ==================== CHALLENGES ====================
+function updateChallengeProgress() {
+    const plasticCount = Math.min((itemsScanned % 5) / 5 * 100, 100);
+    const weeklyCount = Math.min((itemsScanned % 20) / 20 * 100, 100);
+
+    document.getElementById('challenge1-progress').style.width = plasticCount + '%';
+    document.getElementById('challenge4-progress').style.width = weeklyCount + '%';
+}
+
+function showChallenges() {
+    document.getElementById('challenges-modal').classList.remove('hidden');
+}
+
+function closeChallenges() {
+    document.getElementById('challenges-modal').classList.add('hidden');
+}
+
+// ==================== LEADERBOARD ====================
+function showLeaderboard() {
+    document.getElementById('leaderboard-modal').classList.remove('hidden');
+}
+
+function closeLeaderboard() {
+    document.getElementById('leaderboard-modal').classList.add('hidden');
+}
+
+function switchLeaderboard(period) {
+    document.querySelectorAll('.lb-tab').forEach(t => t.classList.remove('active'));
+    event.target.classList.add('active');
+}
+
+// ==================== NEARBY ====================
+function showNearby() {
+    document.getElementById('nearby-modal').classList.remove('hidden');
+}
+
+function closeNearby() {
+    document.getElementById('nearby-modal').classList.add('hidden');
+}
+
+function openDirections(index) {
+    const locations = [
+        { lat: 28.6139, lng: 77.2090 },
+        { lat: 28.6200, lng: 77.2150 },
+        { lat: 28.6100, lng: 77.2000 },
+        { lat: 28.6300, lng: 77.2200 }
+    ];
+    const loc = locations[index];
+    window.open(`https://www.google.com/maps/dir/?api=1&destination=${loc.lat},${loc.lng}`, '_blank');
+}
+
+// ==================== LANGUAGE ====================
+function toggleLanguageModal() {
+    document.getElementById('language-modal').classList.toggle('hidden');
+}
+
+function closeLanguageModal() {
+    document.getElementById('language-modal').classList.add('hidden');
+}
+
+function setLanguage(lang) {
+    currentLanguage = lang;
+    applyLanguage(lang);
+    closeLanguageModal();
+    saveData();
+
+    document.querySelectorAll('.lang-option').forEach(el => el.classList.remove('active'));
+    event.target.classList.add('active');
+}
+
+function applyLanguage(lang) {
+    const t = translations[lang] || translations['en'];
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (t[key]) el.textContent = t[key];
+    });
+}
+
+// ==================== HOME ====================
+function showHome() {
+    document.querySelectorAll('.modal').forEach(m => m.classList.add('hidden'));
+}
+
+function showLocationSettings() {
+    alert(`📍 Current Location: ${userLocation.city}, ${userLocation.country}\n\nRecycling rules are customized for your region.`);
+}
+
+// ==================== SEARCH ====================
 async function searchRecyclingIdeas(itemName) {
     searchModal.classList.remove('hidden');
     searchModalTitle.textContent = `DIY Ideas for ${itemName}`;
+    searchResults.innerHTML = '<div class="search-loading"><div class="spinner-small"></div><p>Searching...</p></div>';
 
-    searchResults.innerHTML = `<div class="search-loading"><div class="spinner-small"></div><p>Finding creative ideas...</p></div>`;
-
-    try {
-        const results = await getSearchResults(itemName);
-        displaySearchResults(results, itemName);
-    } catch (error) {
-        searchResults.innerHTML = `<div class="search-loading"><p style="color:#F44336;">⚠️ Search failed.</p></div>`;
-    }
-}
-
-async function getSearchResults(itemName) {
-    await new Promise(r => setTimeout(r, 1000));
+    await new Promise(r => setTimeout(r, 800));
 
     const guide = recyclingGuide[itemName];
-    let results = [];
-
-    // Add craft ideas from database
-    if (guide && guide.crafts && guide.crafts.length > 0) {
-        results.push({
-            title: `✨ Built-in Craft Ideas for ${itemName}`,
-            snippet: guide.crafts.join(' • '),
-            url: `https://www.pinterest.com/search/pins/?q=DIY+${encodeURIComponent(itemName)}+crafts`
-        });
-    }
-
-    // Add web search results
-    results.push(
-        { title: `DIY Projects with ${itemName}`, snippet: 'Creative tutorials and step-by-step guides for upcycling.', url: `https://www.instructables.com/search/?q=${encodeURIComponent(itemName)}` },
-        { title: `Pinterest: Upcycle ${itemName}`, snippet: 'Thousands of visual ideas and inspiration boards.', url: `https://www.pinterest.com/search/pins/?q=upcycle+${encodeURIComponent(itemName)}` },
-        { title: `YouTube: ${itemName} DIY`, snippet: 'Video tutorials for creative reuse projects.', url: `https://www.youtube.com/results?search_query=DIY+${encodeURIComponent(itemName)}+upcycle` },
-        { title: 'Find Local Repair Cafes', snippet: 'Community events to learn fixing and repurposing.', url: 'https://www.repaircafe.org/en' }
-    );
-
-    return results;
-}
-
-function displaySearchResults(results, itemName) {
-    const guide = recyclingGuide[itemName];
-
     let html = '';
 
-    // Show craft ideas prominently if available
     if (guide && guide.crafts && guide.crafts.length > 0) {
-        html += `<div class="craft-ideas-box">
-            <h4>🎨 Quick Craft Ideas</h4>
-            <div class="craft-chips">
-                ${guide.crafts.map(c => `<span class="craft-chip">${c}</span>`).join('')}
-            </div>
-        </div>`;
+        html += `<div class="craft-ideas-box"><h4>🎨 Quick Ideas</h4><div class="craft-chips">${guide.crafts.map(c => `<span class="craft-chip">${c}</span>`).join('')}</div></div>`;
     }
 
-    html += results.map(r => `
-        <div class="search-item">
-            <h4>${r.title}</h4>
-            <p>${r.snippet}</p>
-            <a href="${r.url}" target="_blank" rel="noopener">Explore →</a>
-        </div>
-    `).join('');
+    html += `
+        <div class="search-item"><h4>DIY Projects with ${itemName}</h4><p>Step-by-step tutorials</p><a href="https://www.instructables.com/search/?q=${encodeURIComponent(itemName)}" target="_blank">Explore →</a></div>
+        <div class="search-item"><h4>Pinterest: Upcycle ${itemName}</h4><p>Visual inspiration</p><a href="https://www.pinterest.com/search/pins/?q=upcycle+${encodeURIComponent(itemName)}" target="_blank">Explore →</a></div>
+        <div class="search-item"><h4>YouTube Tutorials</h4><p>Video guides</p><a href="https://www.youtube.com/results?search_query=DIY+${encodeURIComponent(itemName)}+upcycle" target="_blank">Watch →</a></div>`;
 
     searchResults.innerHTML = html;
 }
