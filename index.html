@@ -2,8 +2,13 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EcoScan AR - Recycling Guide</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>EcoScan AR - Smart Recycling Guide</title>
+    <meta name="description" content="Point your camera at any item and instantly learn how to recycle it properly. AI-powered recycling assistant.">
+    <meta name="theme-color" content="#1a1a2e">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -11,29 +16,67 @@
     <video id="video" autoplay playsinline></video>
     <canvas id="canvas"></canvas>
 
+    <!-- Live Detection Indicator -->
+    <div id="live-indicator">
+        <span class="pulse"></span>
+        <span>LIVE</span>
+    </div>
+
     <!-- Header Stats -->
     <div id="stats">
-        <div>📊 Items: <span id="items-count">0</span></div>
-        <div>🌍 CO₂ Saved: <span id="co2-count">0</span>kg</div>
+        <div class="stat-item">
+            <span class="stat-icon">📊</span>
+            <div class="stat-content">
+                <span class="stat-value" id="items-count">0</span>
+                <span class="stat-label">Scanned</span>
+            </div>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+            <span class="stat-icon">🌍</span>
+            <div class="stat-content">
+                <span class="stat-value"><span id="co2-count">0</span>kg</span>
+                <span class="stat-label">CO₂ Saved</span>
+            </div>
+        </div>
     </div>
 
     <!-- Scan Button -->
     <button id="scan-btn">
-        <span id="scan-icon">📸</span>
-        <span id="scan-text">SCAN ITEM</span>
+        <span id="scan-icon">♻️</span>
+        <span id="scan-text">GET DETAILS</span>
     </button>
 
     <!-- Result Card -->
     <div id="result" class="hidden">
+        <div class="result-handle"></div>
         <div id="result-header">
             <span id="result-icon">♻️</span>
             <h2 id="result-title">Unknown Item</h2>
         </div>
         <div id="result-category"></div>
         <div id="result-content">
-            <p><strong>📦 Disposal:</strong> <span id="disposal-text"></span></p>
-            <p><strong>🗑️ Bin:</strong> <span id="bin-text"></span></p>
-            <p><strong>💡 Tip:</strong> <span id="tip-text"></span></p>
+            <div class="info-row">
+                <span class="info-icon">📦</span>
+                <div class="info-content">
+                    <span class="info-label">Disposal</span>
+                    <span id="disposal-text" class="info-value"></span>
+                </div>
+            </div>
+            <div class="info-row">
+                <span class="info-icon">🗑️</span>
+                <div class="info-content">
+                    <span class="info-label">Bin</span>
+                    <span id="bin-text" class="info-value"></span>
+                </div>
+            </div>
+            <div class="info-row">
+                <span class="info-icon">💡</span>
+                <div class="info-content">
+                    <span class="info-label">Pro Tip</span>
+                    <span id="tip-text" class="info-value"></span>
+                </div>
+            </div>
         </div>
         
         <!-- Web Search Button -->
@@ -46,8 +89,16 @@
 
     <!-- Loading Overlay -->
     <div id="loading" class="hidden">
-        <div class="spinner"></div>
-        <p>Loading AI Model...</p>
+        <div class="loading-content">
+            <div class="logo-animation">
+                <span class="logo-emoji">♻️</span>
+            </div>
+            <h2>EcoScan AR</h2>
+            <p>Loading AI Model...</p>
+            <div class="progress-bar">
+                <div class="progress-fill"></div>
+            </div>
+        </div>
     </div>
 
     <!-- Search Modal -->
@@ -67,11 +118,18 @@
     </div>
 
     <!-- Instructions (first time users) -->
-    <div id="instructions" class="instructions">
+    <div id="instructions" class="instructions hidden">
         <div class="instruction-card">
-            <h3>👋 Welcome to EcoScan AR!</h3>
-            <p>Point your camera at any item and tap SCAN to learn how to recycle it.</p>
-            <button id="got-it-btn">Got it!</button>
+            <div class="instruction-icon">🌱</div>
+            <h3>Welcome to EcoScan AR!</h3>
+            <p>Point your camera at <strong>any item</strong> to see real-time recycling info.</p>
+            <p>Tap <strong>GET DETAILS</strong> for complete disposal instructions.</p>
+            <div class="feature-list">
+                <div class="feature">📱 80+ Items Recognized</div>
+                <div class="feature">🔄 Real-Time Detection</div>
+                <div class="feature">🔍 Web Search for Reuse Ideas</div>
+            </div>
+            <button id="got-it-btn">Start Scanning</button>
         </div>
     </div>
 
