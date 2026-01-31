@@ -74,8 +74,17 @@ body {
 }
 
 @keyframes pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.5; transform: scale(1.2); }
+
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.5;
+        transform: scale(1.2);
+    }
 }
 
 /* Stats Header */
@@ -148,7 +157,7 @@ body {
     border-radius: 50px;
     cursor: pointer;
     box-shadow: 0 10px 40px rgba(16, 185, 129, 0.4),
-                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     z-index: 100;
     display: flex;
@@ -369,8 +378,15 @@ body {
 }
 
 @keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-10px); }
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-10px);
+    }
 }
 
 .loading-content h2 {
@@ -407,9 +423,17 @@ body {
 }
 
 @keyframes progress {
-    0% { width: 0%; }
-    50% { width: 70%; }
-    100% { width: 100%; }
+    0% {
+        width: 0%;
+    }
+
+    50% {
+        width: 70%;
+    }
+
+    100% {
+        width: 100%;
+    }
 }
 
 /* Modal */
@@ -501,7 +525,9 @@ body {
 }
 
 @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .search-item {
@@ -635,29 +661,29 @@ body {
         padding: 12px 16px;
         gap: 16px;
     }
-    
+
     .stat-icon {
         font-size: 20px;
     }
-    
+
     .stat-value {
         font-size: 16px;
     }
-    
+
     #scan-btn {
         padding: 16px 36px;
         font-size: 14px;
         bottom: 30px;
     }
-    
+
     #result-title {
         font-size: 24px;
     }
-    
+
     #result-icon {
         font-size: 40px;
     }
-    
+
     .instruction-card {
         padding: 28px 24px;
     }
@@ -668,8 +694,145 @@ body {
     #scan-btn {
         bottom: calc(30px + env(safe-area-inset-bottom));
     }
-    
+
     #result {
         padding-bottom: calc(30px + env(safe-area-inset-bottom));
     }
+}
+
+/* Object Selection List */
+.object-list-container {
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.object-list-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-light);
+    margin-bottom: 10px;
+}
+
+.object-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.object-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background: #f8fafc;
+    border: 2px solid #e5e7eb;
+    border-radius: 10px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.object-item:hover {
+    background: #f1f5f9;
+    transform: translateY(-1px);
+}
+
+.object-item.selected {
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    border-color: var(--primary);
+    color: white;
+}
+
+.object-item.selected .obj-conf {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.obj-num {
+    width: 20px;
+    height: 20px;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.object-item.selected .obj-num {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.obj-icon {
+    font-size: 16px;
+}
+
+.obj-name {
+    font-weight: 600;
+    text-transform: capitalize;
+}
+
+.obj-conf {
+    font-size: 11px;
+    color: var(--text-light);
+}
+
+/* Craft Ideas Section */
+.crafts-section {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.crafts-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 10px;
+}
+
+.crafts-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.craft-tag {
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    color: #92400e;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+/* Search Modal Craft Box */
+.craft-ideas-box {
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    padding: 16px;
+    border-radius: 14px;
+    margin-bottom: 16px;
+}
+
+.craft-ideas-box h4 {
+    color: #92400e;
+    margin-bottom: 10px;
+    font-size: 15px;
+}
+
+.craft-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.craft-chip {
+    background: white;
+    color: #92400e;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
