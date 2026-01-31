@@ -1,0 +1,397 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    overflow: hidden;
+    background: #000;
+}
+
+/* Camera */
+#video {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+#canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+/* Stats Header */
+#stats {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    right: 20px;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(10px);
+    color: white;
+    padding: 15px 20px;
+    border-radius: 15px;
+    display: flex;
+    justify-content: space-around;
+    font-size: 14px;
+    font-weight: 600;
+    z-index: 10;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+#stats div {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+/* Scan Button */
+#scan-btn {
+    position: absolute;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 20px 50px;
+    font-size: 18px;
+    font-weight: bold;
+    background: linear-gradient(135deg, #4CAF50, #45a049);
+    color: white;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    box-shadow: 0 8px 30px rgba(76, 175, 80, 0.4);
+    transition: all 0.3s ease;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+#scan-btn:active {
+    transform: translateX(-50%) scale(0.95);
+}
+
+#scan-btn.scanning {
+    background: linear-gradient(135deg, #FF5722, #E64A19);
+    box-shadow: 0 8px 30px rgba(255, 87, 34, 0.4);
+}
+
+/* Result Card */
+#result {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: white;
+    border-radius: 25px 25px 0 0;
+    padding: 25px;
+    max-height: 70vh;
+    overflow-y: auto;
+    z-index: 1000;
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.3);
+    transform: translateY(0);
+    transition: transform 0.3s ease;
+}
+
+#result.hidden {
+    transform: translateY(100%);
+}
+
+#result-header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+#result-icon {
+    font-size: 40px;
+}
+
+#result-title {
+    font-size: 24px;
+    color: #333;
+    text-transform: capitalize;
+}
+
+#result-category {
+    display: inline-block;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 14px;
+    margin-bottom: 20px;
+}
+
+#result-content {
+    background: #f5f5f5;
+    padding: 20px;
+    border-radius: 15px;
+    margin-bottom: 15px;
+}
+
+#result-content p {
+    margin-bottom: 12px;
+    line-height: 1.6;
+    color: #555;
+}
+
+#result-content p:last-child {
+    margin-bottom: 0;
+}
+
+/* Search Button */
+.search-button {
+    width: 100%;
+    padding: 15px;
+    background: linear-gradient(135deg, #2196F3, #1976D2);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+}
+
+.search-button:active {
+    transform: scale(0.98);
+}
+
+/* Close Button */
+.close-button {
+    width: 100%;
+    padding: 15px;
+    background: #e0e0e0;
+    color: #666;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+/* Loading */
+#loading {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    z-index: 10000;
+}
+
+#loading.hidden {
+    display: none;
+}
+
+.spinner {
+    width: 50px;
+    height: 50px;
+    border: 5px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #4CAF50;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 20px;
+}
+
+.spinner-small {
+    width: 30px;
+    height: 30px;
+    border: 3px solid rgba(0, 0, 0, 0.1);
+    border-top-color: #2196F3;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 15px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Modal */
+.modal {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+    padding: 20px;
+}
+
+.modal.hidden {
+    display: none;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 20px;
+    width: 100%;
+    max-width: 500px;
+    max-height: 80vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.modal-header h3 {
+    font-size: 20px;
+    color: #333;
+}
+
+.close-modal {
+    background: none;
+    border: none;
+    font-size: 32px;
+    color: #999;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+}
+
+.search-results {
+    padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.search-loading {
+    text-align: center;
+    padding: 40px 20px;
+    color: #666;
+}
+
+.search-item {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    border-left: 4px solid #2196F3;
+}
+
+.search-item h4 {
+    color: #333;
+    margin-bottom: 8px;
+    font-size: 16px;
+}
+
+.search-item p {
+    color: #666;
+    font-size: 14px;
+    line-height: 1.5;
+    margin-bottom: 8px;
+}
+
+.search-item a {
+    color: #2196F3;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.search-item a:hover {
+    text-decoration: underline;
+}
+
+/* Instructions */
+.instructions {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    padding: 20px;
+}
+
+.instructions.hidden {
+    display: none;
+}
+
+.instruction-card {
+    background: white;
+    padding: 30px;
+    border-radius: 20px;
+    text-align: center;
+    max-width: 400px;
+}
+
+.instruction-card h3 {
+    font-size: 24px;
+    margin-bottom: 15px;
+    color: #333;
+}
+
+.instruction-card p {
+    color: #666;
+    line-height: 1.6;
+    margin-bottom: 25px;
+}
+
+#got-it-btn {
+    padding: 12px 40px;
+    background: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 25px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+    #stats {
+        font-size: 12px;
+        padding: 12px 15px;
+    }
+    
+    #scan-btn {
+        padding: 18px 40px;
+        font-size: 16px;
+        bottom: 80px;
+    }
+    
+    #result-title {
+        font-size: 20px;
+    }
+}

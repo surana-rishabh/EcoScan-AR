@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EcoScan AR - Recycling Guide</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Camera Feed -->
+    <video id="video" autoplay playsinline></video>
+    <canvas id="canvas"></canvas>
+
+    <!-- Header Stats -->
+    <div id="stats">
+        <div>📊 Items: <span id="items-count">0</span></div>
+        <div>🌍 CO₂ Saved: <span id="co2-count">0</span>kg</div>
+    </div>
+
+    <!-- Scan Button -->
+    <button id="scan-btn">
+        <span id="scan-icon">📸</span>
+        <span id="scan-text">SCAN ITEM</span>
+    </button>
+
+    <!-- Result Card -->
+    <div id="result" class="hidden">
+        <div id="result-header">
+            <span id="result-icon">♻️</span>
+            <h2 id="result-title">Unknown Item</h2>
+        </div>
+        <div id="result-category"></div>
+        <div id="result-content">
+            <p><strong>📦 Disposal:</strong> <span id="disposal-text"></span></p>
+            <p><strong>🗑️ Bin:</strong> <span id="bin-text"></span></p>
+            <p><strong>💡 Tip:</strong> <span id="tip-text"></span></p>
+        </div>
+        
+        <!-- Web Search Button -->
+        <button id="search-btn" class="search-button">
+            <span>🔍 Find Reuse Ideas Online</span>
+        </button>
+        
+        <button id="close-btn" class="close-button">Close</button>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading" class="hidden">
+        <div class="spinner"></div>
+        <p>Loading AI Model...</p>
+    </div>
+
+    <!-- Search Modal -->
+    <div id="search-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="search-modal-title">Searching...</h3>
+                <button id="close-modal" class="close-modal">×</button>
+            </div>
+            <div id="search-results" class="search-results">
+                <div class="search-loading">
+                    <div class="spinner-small"></div>
+                    <p>Searching for creative reuse ideas...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Instructions (first time users) -->
+    <div id="instructions" class="instructions">
+        <div class="instruction-card">
+            <h3>👋 Welcome to EcoScan AR!</h3>
+            <p>Point your camera at any item and tap SCAN to learn how to recycle it.</p>
+            <button id="got-it-btn">Got it!</button>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.11.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3"></script>
+    <script src="app.js"></script>
+</body>
+</html>
