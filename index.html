@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>EcoScan AR - Smart Recycling Guide</title>
     <meta name="description"
-        content="AI-powered recycling assistant with barcode scanning, location-based rules, and community challenges.">
+        content="AI-powered recycling assistant with barcode scanning, GPS location, and community challenges.">
     <meta name="theme-color" content="#1a1a2e">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -58,7 +58,7 @@
     <!-- Location Badge -->
     <div id="location-badge" onclick="showLocationSettings()">
         <span>📍</span>
-        <span id="location-name">Detecting...</span>
+        <span id="location-name">Detecting GPS...</span>
     </div>
 
     <!-- Mode Toggle Buttons -->
@@ -176,51 +176,9 @@
                 <h3 data-i18n="challenges_title">🎯 Daily Challenges</h3>
                 <button class="close-modal" onclick="closeChallenges()">×</button>
             </div>
-            <div class="challenges-container">
-                <div class="challenge-card active">
-                    <div class="challenge-icon">🥤</div>
-                    <div class="challenge-info">
-                        <h4 data-i18n="challenge1">Plastic Detective</h4>
-                        <p data-i18n="challenge1_desc">Scan 5 plastic items today</p>
-                        <div class="progress-bar-small">
-                            <div class="progress-fill-small" id="challenge1-progress" style="width: 40%"></div>
-                        </div>
-                        <span class="challenge-reward">+50 pts</span>
-                    </div>
-                </div>
-                <div class="challenge-card">
-                    <div class="challenge-icon">🍎</div>
-                    <div class="challenge-info">
-                        <h4 data-i18n="challenge2">Compost Champion</h4>
-                        <p data-i18n="challenge2_desc">Scan 3 compostable items</p>
-                        <div class="progress-bar-small">
-                            <div class="progress-fill-small" id="challenge2-progress" style="width: 66%"></div>
-                        </div>
-                        <span class="challenge-reward">+30 pts</span>
-                    </div>
-                </div>
-                <div class="challenge-card completed">
-                    <div class="challenge-icon">📱</div>
-                    <div class="challenge-info">
-                        <h4 data-i18n="challenge3">E-Waste Expert</h4>
-                        <p data-i18n="challenge3_desc">Learn about e-waste disposal</p>
-                        <div class="progress-bar-small">
-                            <div class="progress-fill-small" style="width: 100%"></div>
-                        </div>
-                        <span class="challenge-reward">✓ Completed</span>
-                    </div>
-                </div>
-                <div class="challenge-card weekly">
-                    <div class="challenge-icon">🌍</div>
-                    <div class="challenge-info">
-                        <h4 data-i18n="challenge4">Weekly: Eco Warrior</h4>
-                        <p data-i18n="challenge4_desc">Scan 20 items this week</p>
-                        <div class="progress-bar-small">
-                            <div class="progress-fill-small" id="challenge4-progress" style="width: 35%"></div>
-                        </div>
-                        <span class="challenge-reward">+200 pts</span>
-                    </div>
-                </div>
+            <div class="challenges-container" id="challenges-list">
+                <!-- Loaded from Firebase -->
+                <div class="loading-spinner-small">Loading challenges...</div>
             </div>
         </div>
     </div>
@@ -238,38 +196,8 @@
                 <button class="lb-tab" onclick="switchLeaderboard('alltime')">All Time</button>
             </div>
             <div class="leaderboard-container" id="leaderboard-list">
-                <div class="lb-item rank-1">
-                    <span class="lb-rank">🥇</span>
-                    <div class="lb-user">
-                        <span class="lb-avatar">👤</span>
-                        <span class="lb-name">EcoWarrior_99</span>
-                    </div>
-                    <span class="lb-points">2,450 pts</span>
-                </div>
-                <div class="lb-item rank-2">
-                    <span class="lb-rank">🥈</span>
-                    <div class="lb-user">
-                        <span class="lb-avatar">👤</span>
-                        <span class="lb-name">GreenHero</span>
-                    </div>
-                    <span class="lb-points">2,180 pts</span>
-                </div>
-                <div class="lb-item rank-3">
-                    <span class="lb-rank">🥉</span>
-                    <div class="lb-user">
-                        <span class="lb-avatar">👤</span>
-                        <span class="lb-name">RecycleKing</span>
-                    </div>
-                    <span class="lb-points">1,920 pts</span>
-                </div>
-                <div class="lb-item you">
-                    <span class="lb-rank">24</span>
-                    <div class="lb-user">
-                        <span class="lb-avatar">⭐</span>
-                        <span class="lb-name">You</span>
-                    </div>
-                    <span class="lb-points" id="your-lb-points">0 pts</span>
-                </div>
+                <!-- Loaded from Firebase -->
+                <div class="loading-spinner-small">Loading leaderboard...</div>
             </div>
         </div>
     </div>
@@ -282,42 +210,8 @@
                 <button class="close-modal" onclick="closeNearby()">×</button>
             </div>
             <div class="nearby-container" id="nearby-list">
-                <div class="nearby-item">
-                    <div class="nearby-icon" style="background: #4CAF50">♻️</div>
-                    <div class="nearby-info">
-                        <h4>City Recycling Center</h4>
-                        <p>📍 1.2 km away • Open until 6 PM</p>
-                        <p class="nearby-accepts">Accepts: Plastic, Paper, Glass, Metal</p>
-                    </div>
-                    <button class="nearby-directions" onclick="openDirections(0)">🧭</button>
-                </div>
-                <div class="nearby-item">
-                    <div class="nearby-icon" style="background: #F44336">📱</div>
-                    <div class="nearby-info">
-                        <h4>E-Waste Drop-off</h4>
-                        <p>📍 2.8 km away • Open 24/7</p>
-                        <p class="nearby-accepts">Accepts: Electronics, Batteries, Cables</p>
-                    </div>
-                    <button class="nearby-directions" onclick="openDirections(1)">🧭</button>
-                </div>
-                <div class="nearby-item">
-                    <div class="nearby-icon" style="background: #8BC34A">🌱</div>
-                    <div class="nearby-info">
-                        <h4>Community Compost</h4>
-                        <p>📍 0.5 km away • Weekends only</p>
-                        <p class="nearby-accepts">Accepts: Food waste, Yard waste</p>
-                    </div>
-                    <button class="nearby-directions" onclick="openDirections(2)">🧭</button>
-                </div>
-                <div class="nearby-item">
-                    <div class="nearby-icon" style="background: #FF9800">⚠️</div>
-                    <div class="nearby-info">
-                        <h4>Hazardous Waste Facility</h4>
-                        <p>📍 5.1 km away • By appointment</p>
-                        <p class="nearby-accepts">Accepts: Chemicals, Paint, Batteries</p>
-                    </div>
-                    <button class="nearby-directions" onclick="openDirections(3)">🧭</button>
-                </div>
+                <!-- Loaded from OpenStreetMap -->
+                <div class="loading-spinner-small">Finding nearby facilities...</div>
             </div>
         </div>
     </div>
@@ -349,7 +243,7 @@
                 <span class="logo-emoji">♻️</span>
             </div>
             <h2>EcoScan AR</h2>
-            <p>Loading AI Model...</p>
+            <p id="loading-status">Loading AI Model...</p>
             <div class="progress-bar">
                 <div class="progress-fill"></div>
             </div>
@@ -375,20 +269,25 @@
             <p data-i18n="welcome_desc">Scan any item to learn how to recycle it properly.</p>
             <div class="feature-list">
                 <div class="feature">📷 AI Object Detection</div>
-                <div class="feature">📊 Barcode Scanning</div>
-                <div class="feature">📍 Location-Based Rules</div>
-                <div class="feature">🎯 Daily Challenges</div>
-                <div class="feature">🏆 Community Leaderboard</div>
+                <div class="feature">📊 Real Barcode Database</div>
+                <div class="feature">📍 GPS Location</div>
+                <div class="feature">🎯 Live Challenges</div>
+                <div class="feature">🏆 Global Leaderboard</div>
                 <div class="feature">🌐 8 Languages</div>
             </div>
             <button id="got-it-btn" data-i18n="start">Start Scanning</button>
         </div>
     </div>
 
-    <!-- Scripts -->
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+
+    <!-- TensorFlow & COCO-SSD -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.11.0"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3"></script>
-    <script src="https://unpkg.com/@AykutSarac/barcode-detector@latest/dist/barcode-detector.min.js"></script>
+
     <script src="app.js"></script>
 </body>
 
