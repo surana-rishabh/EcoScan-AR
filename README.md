@@ -16,8 +16,8 @@ A web-based AR app that helps you recycle correctly by identifying items and pro
 
 1. Clone the repo:
 ```bash
-git clone https://github.com/yourusername/ecoscan-ar.git
-cd ecoscan-ar
+git clone https://github.com/surana-rishabh/EcoScan-AR.git
+cd EcoScan-AR
 ```
 
 2. Open `index.html` in a browser (or use Live Server in VS Code)
@@ -35,12 +35,12 @@ cd ecoscan-ar
 
 ## 📱 Supported Items
 
-Currently detects 14+ common items:
+Currently detects 80+ common items:
 - Bottles, Cups, Cardboard
 - Electronics (phones, laptops, keyboards)
 - Food waste (bananas, apples)
 - Batteries, Light bulbs
-- Plastic bags, Books, and more!
+- Plastic bags, Books, and many more!
 
 ## 🎯 Hackathon Pitch
 
@@ -52,16 +52,19 @@ Currently detects 14+ common items:
 
 ## 📈 Future Enhancements
 
-- [ ] Barcode scanning for detailed product info
-- [ ] Location-based recycling rules
-- [ ] Community challenges & leaderboards
-- [ ] Integration with local waste management
-- [ ] Multilingual support
+- [ ] Barcode scanning for detailed product info              DONE
+- [ ] Location-based recycling rules                          DONE
+- [ ] Community challenges & leaderboards                     DONE
+- [ ] Integration with local waste management                 DONE
+- [ ] Multilingual support                                    WORKING UPON
 
 ## 📄 License
 
 MIT
 
 ## 👏 Credits
+RISHABH SURANA
+CLAUDE
+RISHABH SURANA
 
 Built with 💚 for a sustainable future.
