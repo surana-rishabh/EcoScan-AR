@@ -688,9 +688,11 @@ function closeLeaderboard() {
     document.getElementById('leaderboard-modal').classList.add('hidden');
 }
 
-function switchLeaderboard(period) {
+function switchLeaderboard(period, event) {
     document.querySelectorAll('.lb-tab').forEach(t => t.classList.remove('active'));
-    event.target.classList.add('active');
+    if (event && event.target) {
+        event.target.classList.add('active');
+    }
     loadLeaderboard(); // Would filter by period in production
 }
 
@@ -798,8 +800,14 @@ function setLanguage(lang) {
     closeLanguageModal();
     saveData();
 
-    document.querySelectorAll('.lang-option').forEach(el => el.classList.remove('active'));
-    event.target.classList.add('active');
+    // Update active language option
+    document.querySelectorAll('.lang-option').forEach(el => {
+        el.classList.remove('active');
+        const onclick = el.getAttribute('onclick');
+        if (onclick && onclick.includes(`'${lang}'`)) {
+            el.classList.add('active');
+        }
+    });
 }
 
 function applyLanguage(lang) {

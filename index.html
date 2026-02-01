@@ -191,9 +191,9 @@
                 <button class="close-modal" onclick="closeLeaderboard()">×</button>
             </div>
             <div class="leaderboard-tabs">
-                <button class="lb-tab active" onclick="switchLeaderboard('weekly')">This Week</button>
-                <button class="lb-tab" onclick="switchLeaderboard('monthly')">This Month</button>
-                <button class="lb-tab" onclick="switchLeaderboard('alltime')">All Time</button>
+                <button class="lb-tab active" onclick="switchLeaderboard('weekly', event)">This Week</button>
+                <button class="lb-tab" onclick="switchLeaderboard('monthly', event)">This Month</button>
+                <button class="lb-tab" onclick="switchLeaderboard('alltime', event)">All Time</button>
             </div>
             <div class="leaderboard-container" id="leaderboard-list">
                 <!-- Loaded from Firebase -->
