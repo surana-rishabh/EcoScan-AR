@@ -48,13 +48,6 @@ Currently detects 80+ common items:
 - Batteries, Light bulbs
 - Plastic bags, Books, and many more!
 
-## 🎯 Hackathon Pitch
-
-**Problem:** 75% of recyclables end up in landfills due to confusion about recycling rules.
-
-**Solution:** EcoScan AR makes recycling effortless with instant AR-powered guidance.
-
-**Impact:** If 1% of smartphone users scan one item/day → 30M+ items diverted from landfills annually.
 
 ## 📈 Future Enhancements
 
@@ -74,4 +67,5 @@ CLAUDE
 RISHABH SURANA
 
 Built with 💚 for a sustainable future.
+
 
