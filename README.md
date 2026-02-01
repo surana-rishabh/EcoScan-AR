@@ -1,5 +1,11 @@
 # 🌍 EcoScan AR - Smart Recycling Guide
 
+CLICK THE LINK TO TRY IT OUT
+https://surana-rishabh.github.io/EcoScan-AR/
+
+
+
+
 **Point. Scan. Recycle Right.**
 
 A web-based AR app that helps you recycle correctly by identifying items and providing instant disposal instructions.
@@ -68,3 +74,4 @@ CLAUDE
 RISHABH SURANA
 
 Built with 💚 for a sustainable future.
+
